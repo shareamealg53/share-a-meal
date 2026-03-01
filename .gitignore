@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+.env.test
+.env.example
 
 # Dependencies
 node_modules/
@@ -79,6 +81,6 @@ backend/ml/*.pkl
 */docs
 
 # Docker files
-docker-compose.yml
-Dockerfile.local
-*.dockerignore
+#docker-compose.yml
+#Dockerfile.local
+#*.dockerignore

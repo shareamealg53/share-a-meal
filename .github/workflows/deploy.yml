@@ -15,6 +15,20 @@ jobs:
     name: Test Backend
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: sharemeal_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -29,6 +43,16 @@ jobs:
       - name: Install dependencies
         run: cd backend && npm ci
 
+      - name: Run database migrations
+        run: cd backend && npm run migrate
+        env:
+          NODE_ENV: test
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: root
+          DB_NAME: sharemeal_test
+          DB_PORT: 3306
+
       - name: Run linter
         run: cd backend && npm run lint || true # Optional - lint warnings don't fail build
 
@@ -36,6 +60,13 @@ jobs:
         run: cd backend && npm test
         env:
           NODE_ENV: test
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: root
+          DB_NAME: sharemeal_test
+          DB_PORT: 3306
+          JWT_SECRET: test-jwt-secret
+          ADMIN_SECRET_KEY: test-admin-secret
 
   # Frontend Tests
   test-frontend:
