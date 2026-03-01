@@ -12,7 +12,7 @@ Dependencies are already installed. If you need to reinstall:
 npm install
 ```
 
-### 2. Create Test Database
+### 2. Create Test Databases
 
 Create a separate test database to avoid affecting your development data:
 
