@@ -11,9 +11,15 @@ module.exports = () =>
 	cors({
 		origin: function (origin, callback) {
 			if (!origin) return callback(null, true); // allow Postman / curl
+			// Allow localhost and known origins
 			if (allowedOrigins.includes(origin)) {
-				callback(null, origin); // return the origin string explicitly
-			} else {
+				callback(null, origin);
+			}
+			// Allow any Vercel deployment URL (ends with vercel.app)
+			else if (origin.endsWith(".vercel.app")) {
+				callback(null, origin);
+			}
+			else {
 				callback(new Error("Not allowed by CORS"));
 			}
 		},
