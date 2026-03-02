@@ -29,6 +29,10 @@ const pool = require("./config/db");
 // Initialize Express app
 const app = express();
 
+console.log("✅ ShareAMeal Backend Starting...");
+console.log(`📝 NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`🔗 API_URL configured`);
+
 /**
  * Trust proxy (Required for correct IP detection on Render/Railway/Nginx)
  */
