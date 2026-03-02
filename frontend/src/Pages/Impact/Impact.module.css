@@ -1,0 +1,248 @@
+.layout {
+	display: flex;
+	height: 100vh;
+	background-color: #f8f9fa;
+}
+
+.main {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+}
+
+.content {
+	flex: 1;
+	padding: 2rem;
+	max-width: 1200px;
+	margin: 0 auto;
+	width: 100%;
+}
+
+.loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100vh;
+	font-size: 1.2rem;
+	color: #666;
+}
+
+/* Hero Section */
+.hero {
+	text-align: center;
+	margin-bottom: 3rem;
+	padding: 2rem;
+	background: linear-gradient(135deg, #2d5016 0%, #4a8c2a 100%);
+	color: white;
+	border-radius: 8px;
+}
+
+.hero h1 {
+	font-size: 2.5rem;
+	margin: 0 0 0.5rem 0;
+	font-weight: 700;
+}
+
+.hero p {
+	font-size: 1.1rem;
+	margin: 0;
+	opacity: 0.9;
+}
+
+/* Metrics Section */
+.metricsSection {
+	margin-bottom: 3rem;
+}
+
+.metricsSection h2 {
+	font-size: 1.8rem;
+	margin-bottom: 1.5rem;
+	color: #333;
+}
+
+.metricsGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 1.5rem;
+}
+
+.metricCard {
+	background: white;
+	padding: 1.5rem;
+	border-radius: 8px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	text-align: center;
+	transition: transform 0.2s ease;
+}
+
+.metricCard:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.metricCard h3 {
+	font-size: 0.95rem;
+	color: #666;
+	margin: 0 0 0.5rem 0;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.metricValue {
+	font-size: 2.5rem;
+	font-weight: 700;
+	color: #2d5016;
+	margin: 0.5rem 0;
+}
+
+.metricCard p {
+	font-size: 0.9rem;
+	color: #999;
+	margin: 0.5rem 0 0 0;
+}
+
+/* Stories Section */
+.storiesSection {
+	margin-bottom: 3rem;
+}
+
+.storiesSection h2 {
+	font-size: 1.8rem;
+	margin-bottom: 1.5rem;
+	color: #333;
+}
+
+.storiesGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 1.5rem;
+}
+
+.storyCard {
+	background: white;
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	transition: transform 0.2s ease;
+}
+
+.storyCard:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.storyImage {
+	background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+	height: 150px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2.5rem;
+}
+
+.storyCard h3 {
+	padding: 1rem 1.5rem 0.5rem;
+	margin: 0;
+	font-size: 1.1rem;
+	color: #333;
+}
+
+.storyCard p {
+	padding: 0.5rem 1.5rem;
+	margin: 0;
+	color: #666;
+	font-size: 0.95rem;
+	line-height: 1.5;
+}
+
+.storyCard button {
+	padding: 0.75rem 1.5rem;
+	margin: 1rem;
+	background-color: #2d5016;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: background-color 0.2s ease;
+}
+
+.storyCard button:hover {
+	background-color: #1e3610;
+}
+
+/* CTA Section */
+.ctaSection {
+	text-align: center;
+	padding: 2rem;
+	margin-top: 3rem;
+}
+
+.ctaSection h2 {
+	font-size: 1.8rem;
+	margin-bottom: 2rem;
+	color: #333;
+}
+
+.ctaCards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 1.5rem;
+}
+
+.ctaCard {
+	background: white;
+	padding: 2rem;
+	border-radius: 8px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	border-top: 3px solid #2d5016;
+}
+
+.ctaCard h3 {
+	font-size: 1.2rem;
+	margin: 0 0 0.5rem 0;
+	color: #333;
+}
+
+.ctaCard p {
+	color: #666;
+	margin-bottom: 1.5rem;
+}
+
+.primaryBtn {
+	padding: 0.75rem 1.5rem;
+	background-color: #2d5016;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+	font-size: 0.95rem;
+	transition: background-color 0.2s ease;
+}
+
+.primaryBtn:hover {
+	background-color: #1e3610;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	.hero h1 {
+		font-size: 1.8rem;
+	}
+
+	.metricsGrid,
+	.storiesGrid,
+	.ctaCards {
+		grid-template-columns: 1fr;
+	}
+
+	.content {
+		padding: 1rem;
+	}
+
+	.metricValue {
+		font-size: 2rem;
+	}
+}
