@@ -10,13 +10,28 @@ const {
 const { adminRegister, adminLogin } = require("../controllers/authController");
 
 const { authenticate, requireRole } = require("../middleware/auth");
-const { validateIdParam } = require("../middleware/validate");
+const {
+	validateIdParam,
+	sanitizeAuthPayload,
+	validateAdminRegistration,
+	validateAdminLogin,
+} = require("../middleware/validate");
 
 const router = express.Router();
 
-router.post("/auth/register", adminRegister);
+router.post(
+	"/auth/register",
+	sanitizeAuthPayload,
+	validateAdminRegistration,
+	adminRegister,
+);
 
-router.post("/auth/login", adminLogin);
+router.post(
+	"/auth/login",
+	sanitizeAuthPayload,
+	validateAdminLogin,
+	adminLogin,
+);
 
 router.get(
 	"/users/pending",

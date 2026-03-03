@@ -11,23 +11,6 @@ const register = async (req, res, next) => {
 		const { name, email, password, role, organization_name, address, phone } =
 			req.body;
 
-		if (!name || !email || !password || !role) {
-			throw new AppError("Missing required fields", 400, "VALIDATION_ERROR", {
-				fields: ["name", "email", "password", "role"],
-			});
-		}
-
-		const normalizedRole = role.toLowerCase();
-
-		if (!["sme", "ngo", "sponsor"].includes(normalizedRole)) {
-			throw new AppError(
-				"Invalid role. Allowed roles: sme, ngo, sponsor",
-				400,
-				"INVALID_PARAM",
-				{ field: "role", value: role },
-			);
-		}
-
 		const hashedPassword = await bcrypt.hash(password, 10);
 
 		const [result] = await pool.query(
@@ -36,7 +19,7 @@ const register = async (req, res, next) => {
 				name,
 				email,
 				hashedPassword,
-				normalizedRole,
+				role,
 				organization_name,
 				address,
 				phone,
@@ -55,15 +38,6 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
 	try {
 		const { email, password } = req.body;
-
-		if (!email || !password) {
-			throw new AppError(
-				"Email and password required",
-				400,
-				"VALIDATION_ERROR",
-				{ fields: ["email", "password"] },
-			);
-		}
 
 		const [users] = await pool.query("SELECT * FROM users WHERE email = ?", [
 			email,
@@ -87,6 +61,14 @@ const login = async (req, res, next) => {
 
 		if (!isMatch) {
 			throw new AppError("Invalid credentials", 401, "AUTH_FAILED");
+		}
+
+		if (!user.is_verified) {
+			throw new AppError(
+				"Account is pending verification. Please wait for admin approval.",
+				403,
+				"ACCOUNT_UNVERIFIED",
+			);
 		}
 
 		const token = jwt.sign(
@@ -115,12 +97,6 @@ const adminRegister = async (req, res, next) => {
 	try {
 		const { name, email, password, admin_secret } = req.body;
 
-		if (!name || !email || !password || !admin_secret) {
-			throw new AppError("Missing required fields", 400, "VALIDATION_ERROR", {
-				fields: ["name", "email", "password", "admin_secret"],
-			});
-		}
-
 		if (admin_secret !== process.env.ADMIN_SECRET) {
 			throw new AppError("Invalid admin secret key", 403, "FORBIDDEN");
 		}
@@ -144,15 +120,6 @@ const adminRegister = async (req, res, next) => {
 const adminLogin = async (req, res, next) => {
 	try {
 		const { email, password } = req.body;
-
-		if (!email || !password) {
-			throw new AppError(
-				"Email and password required",
-				400,
-				"VALIDATION_ERROR",
-				{ fields: ["email", "password"] },
-			);
-		}
 
 		const [users] = await pool.query(
 			"SELECT * FROM users WHERE email = ? AND role = 'admin'",

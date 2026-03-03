@@ -6,11 +6,15 @@ import styles from "./Signup.module.css";
 import Openeye from "../../assets/Icons/eye-open.svg?react";
 import Closedeye from "../../assets/Icons/eye-closed.svg?react";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_REGEX = /^[A-Za-z][A-Za-z\s'-.]{1,79}$/;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
+
 function Signup() {
 	const {
 		register,
 		handleSubmit,
-		watch, // ✅ ADDED
+		watch,
 		formState: { errors },
 	} = useForm();
 
@@ -18,11 +22,12 @@ function Signup() {
 	const [isSuccess, setIsSuccess] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-	const [loading, setLoading] = useState(false); // ✅ ADDED
+	const [loading, setLoading] = useState(false);
 
 	const navigate = useNavigate();
 
-	const password = watch("password"); // ✅ ADDED
+	const password = watch("password");
+	const role = watch("role");
 
 	const togglePassword = () => {
 		setShowPassword((prev) => !prev);
@@ -32,11 +37,18 @@ function Signup() {
 		setLoading(true);
 		setServerMessage("");
 		try {
-			// Use centralized API helper
+			const payload = {
+				name: data.name,
+				email: data.email,
+				password: data.password,
+				role: data.role,
+				organization_name: data.organization_name,
+			};
+
 			const result = await import("../../api").then((m) =>
 				m.apiRequest("/auth/register", {
 					method: "POST",
-					body: JSON.stringify(data),
+					body: JSON.stringify(payload),
 				}),
 			);
 			setServerMessage("Signup successful!");
@@ -68,14 +80,28 @@ function Signup() {
 				<div className={styles.inputGroup}>
 					<input
 						placeholder="Full Name"
-						{...register("name", { required: "Full Name is required" })}
+						{...register("name", {
+							required: "Full Name is required",
+							pattern: {
+								value: NAME_REGEX,
+								message:
+									"Name must be 2-80 letters and can include spaces, apostrophes, hyphens, or dots",
+							},
+						})}
 					/>
 					{errors.name && <p className={styles.error}>{errors.name.message}</p>}
 				</div>
 				<div className={styles.inputGroup}>
 					<input
+						type="email"
 						placeholder="Email Address"
-						{...register("email", { required: "Email is required" })}
+						{...register("email", {
+							required: "Email is required",
+							pattern: {
+								value: EMAIL_REGEX,
+								message: "Enter a valid email address",
+							},
+						})}
 					/>
 					{errors.email && (
 						<p className={styles.error}>{errors.email.message}</p>
@@ -94,11 +120,35 @@ function Signup() {
 					{errors.role && <p className={styles.error}>{errors.role.message}</p>}
 				</div>
 				<div className={styles.inputGroup}>
+					<input
+						placeholder="Organization Name"
+						{...register("organization_name", {
+							validate: (value) => {
+								if (["sme", "ngo"].includes(role || "") && !value?.trim()) {
+									return "Organization Name is required for SMEs and NGOs";
+								}
+								return true;
+							},
+						})}
+					/>
+					{errors.organization_name && (
+						<p className={styles.error}>{errors.organization_name.message}</p>
+					)}
+				</div>
+
+				<div className={styles.inputGroup}>
 					<div className={styles.passwordWrapper}>
 						<input
 							type={showPassword ? "text" : "password"}
 							placeholder="Enter Password"
-							{...register("password", { required: "Password is required" })}
+							{...register("password", {
+								required: "Password is required",
+								pattern: {
+									value: PASSWORD_REGEX,
+									message:
+										"Password must be 8+ chars with uppercase, lowercase, number, and special character",
+								},
+							})}
 						/>
 						<span onClick={togglePassword}>
 							{showPassword ? <Openeye /> : <Closedeye />}
