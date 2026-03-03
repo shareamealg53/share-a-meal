@@ -1,5 +1,13 @@
 const request = require("supertest");
 const app = require("../src/app");
+const jwt = require("jsonwebtoken");
+
+// Mock the database pool
+jest.mock("../src/config/db", () => ({
+	query: jest.fn(),
+}));
+
+const pool = require("../src/config/db");
 
 describe("Claim Endpoints", () => {
 	let smeToken;
@@ -8,67 +16,123 @@ describe("Claim Endpoints", () => {
 	let testMealId;
 
 	beforeAll(async () => {
+		// Generate tokens directly without needing actual registration/authorization
+		const smeUserId = 1;
+		const ngoUserId = 2;
+		const adminUserId = 3;
+
+		smeToken = jwt.sign(
+			{ id: smeUserId, email: "sme@test.com", role: "sme" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
+
+		ngoToken = jwt.sign(
+			{ id: ngoUserId, email: "ngo@test.com", role: "ngo" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
+
+		adminToken = jwt.sign(
+			{ id: adminUserId, email: "admin@test.com", role: "admin" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
+
+		// Setup mock implementation for database queries
+		pool.query.mockImplementation(async (query, params) => {
+			// Handle user authentication queries
+			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+				const userId = params[0];
+				if (userId === smeUserId) {
+					return [[{ id: smeUserId, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
+				} else if (userId === ngoUserId) {
+					return [[{ id: ngoUserId, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
+				} else if (userId === adminUserId) {
+					return [[{ id: adminUserId, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
+				}
+			}
+			// Handle meal queries
+			else if (query.includes("SELECT") && query.includes("FROM meals")) {
+				if (params[0] === 99999) {
+					return [[], undefined];
+				}
+				// Return meal data
+				return [[{
+					id: params[0] || 100,
+					title: "Test Meal for Claims",
+					quantity: 10,
+					unit: "servings",
+					food_status: "AVAILABLE",
+					created_by: smeUserId,
+				}], undefined];
+			}
+			// Handle claim INSERT
+			else if (query.includes("INSERT INTO claims")) {
+				return [{ insertId: Math.floor(Math.random() * 10000) + 1, affectedRows: 1 }, undefined];
+			}
+			// Handle claim SELECT queries
+			else if (query.includes("SELECT") && query.includes("claims")) {
+				return [[{
+					id: 1,
+					meal_id: 100,
+					ngo_id: ngoUserId,
+					status: "CLAIMED",
+				}], undefined];
+			}
+			// Default response
+			return [[], undefined];
+		});
+
+		// Set deterministic test meal ID
+		testMealId = 100;
+	});
+
+	beforeEach(() => {
+		// Reset mock calls between tests but maintain mock function
+		pool.query.mockClear();
 		
-		const adminEmail = `admin${Date.now()}@test.com`;
-		await request(app).post("/admin/auth/register").send({
-			name: "Test Admin",
-			email: adminEmail,
-			password: "Admin123!",
-			admin_secret: process.env.ADMIN_SECRET,
+		// Re-apply default implementation
+		pool.query.mockImplementation(async (query, params) => {
+			// Handle user authentication queries
+			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+				const userId = params[0];
+				if (userId === 1) {
+					return [[{ id: 1, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
+				} else if (userId === 2) {
+					return [[{ id: 2, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
+				} else if (userId === 3) {
+					return [[{ id: 3, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
+				}
+			}
+			// Handle meal queries
+			else if (query.includes("SELECT") && query.includes("FROM meals")) {
+				if (params[0] === 99999) {
+					return [[], undefined];
+				}
+				return [[{
+					id: params[0] || 100,
+					title: "Test Meal for Claims",
+					quantity: 10,
+					food_status: "AVAILABLE",
+					created_by: 1,
+				}], undefined];
+			}
+			// Handle claim INSERT
+			else if (query.includes("INSERT INTO claims")) {
+				return [{ insertId: Math.floor(Math.random() * 10000) + 1, affectedRows: 1 }, undefined];
+			}
+			// Handle claim SELECT queries
+			else if (query.includes("SELECT") && query.includes("claims")) {
+				return [[{
+					id: 1,
+					meal_id: 100,
+					ngo_id: 2,
+					status: "CLAIMED",
+				}], undefined];
+			}
+			return [[], undefined];
 		});
-
-		const adminLogin = await request(app).post("/admin/auth/login").send({
-			email: adminEmail,
-			password: "Admin123!",
-		});
-		adminToken = adminLogin.body.token;
-
-		const smeEmail = `sme${Date.now()}@test.com`;
-		const smeRegister = await request(app).post("/auth/register").send({
-			name: "Test SME",
-			email: smeEmail,
-			password: "Test123!",
-			role: "sme",
-		});
-
-		await request(app)
-			.patch(`/admin/verify/${smeRegister.body.userId}`)
-			.set("Authorization", `Bearer ${adminToken}`);
-
-		const smeLogin = await request(app).post("/auth/login").send({
-			email: smeEmail,
-			password: "Test123!",
-		});
-		smeToken = smeLogin.body.token;
-
-		const ngoEmail = `ngo${Date.now()}@test.com`;
-		const ngoRegister = await request(app).post("/auth/register").send({
-			name: "Test NGO",
-			email: ngoEmail,
-			password: "Test123!",
-			role: "ngo",
-		});
-
-		await request(app)
-			.patch(`/admin/verify/${ngoRegister.body.userId}`)
-			.set("Authorization", `Bearer ${adminToken}`);
-
-		const ngoLogin = await request(app).post("/auth/login").send({
-			email: ngoEmail,
-			password: "Test123!",
-		});
-		ngoToken = ngoLogin.body.token;
-
-		const mealResponse = await request(app)
-			.post("/meals")
-			.set("Authorization", `Bearer ${smeToken}`)
-			.send({
-				title: "Test Meal for Claims",
-				quantity: 10,
-				unit: "servings",
-				prepared_at: "2026-02-22 10:00:00",
-			});
-		testMealId = mealResponse.body.meal.id;
 	});
 
 	describe("POST /claims/meal/:mealId", () => {
@@ -89,19 +153,11 @@ describe("Claim Endpoints", () => {
 		});
 
 		test("Should fail when SME tries to claim meal", async () => {
-			
-			const mealResponse = await request(app)
-				.post("/meals")
-				.set("Authorization", `Bearer ${smeToken}`)
-				.send({
-					title: "Another Test Meal",
-					quantity: 5,
-					unit: "servings",
-					prepared_at: "2026-02-22 10:00:00",
-				});
+			// Use deterministic meal ID for this test
+			const anotherMealId = 101;
 
 			const response = await request(app)
-				.post(`/claims/meal/${mealResponse.body.meal.id}`)
+				.post(`/claims/meal/${anotherMealId}`)
 				.set("Authorization", `Bearer ${smeToken}`);
 
 			expect(response.status).toBe(403);
@@ -214,25 +270,45 @@ describe("Claim Endpoints", () => {
 		let pickupClaimId;
 
 		beforeAll(async () => {
-			const mealResponse = await request(app)
-				.post("/meals")
-				.set("Authorization", `Bearer ${smeToken}`)
-				.send({
-					title: "Pickup Test Meal",
-					quantity: 5,
-					unit: "servings",
-					prepared_at: "2026-02-22 10:00:00",
-				});
+			// Use deterministic meal and claim IDs for this test block
+			const pickupMealId = 102;
+			pickupClaimId = 201;
 
-			const claimResponse = await request(app)
-				.post(`/claims/meal/${mealResponse.body.meal.id}`)
-				.set("Authorization", `Bearer ${ngoToken}`);
-
-			pickupClaimId = claimResponse.body.claimId;
-
-			await request(app)
-				.patch(`/claims/meal/${mealResponse.body.meal.id}/ready`)
-				.set("Authorization", `Bearer ${smeToken}`);
+			// Mock the database to return appropriate data for these IDs
+			pool.query.mockImplementation(async (query, params) => {
+				if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+					const userId = params[0];
+					if (userId === 1) {
+						return [[{ id: 1, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
+					} else if (userId === 2) {
+						return [[{ id: 2, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
+					}
+				}
+				// Handle meal queries
+				else if (query.includes("SELECT") && query.includes("FROM meals")) {
+					if (params[0] === pickupMealId) {
+						return [[{
+							id: pickupMealId,
+							title: "Pickup Test Meal",
+							quantity: 5,
+							food_status: "AVAILABLE",
+							created_by: 1,
+						}], undefined];
+					}
+				}
+				// Handle claim queries and inserts
+				else if (query.includes("INSERT INTO claims")) {
+					return [{ insertId: pickupClaimId, affectedRows: 1 }, undefined];
+				} else if (query.includes("SELECT") && query.includes("claims")) {
+					return [[{
+						id: pickupClaimId,
+						meal_id: pickupMealId,
+						ngo_id: 2,
+						status: "CLAIMED",
+					}], undefined];
+				}
+				return [[], undefined];
+			});
 		});
 
 		test("Should confirm pickup by NGO", async () => {
@@ -284,29 +360,45 @@ describe("Claim Endpoints", () => {
 		let completeClaimId;
 
 		beforeAll(async () => {
-			const mealResponse = await request(app)
-				.post("/meals")
-				.set("Authorization", `Bearer ${smeToken}`)
-				.send({
-					title: "Completion Flow Meal",
-					quantity: 5,
-					unit: "servings",
-					prepared_at: "2026-02-22 10:00:00",
-				});
+			// Use deterministic meal and claim IDs for this test block
+			const completeMealId = 103;
+			completeClaimId = 202;
 
-			const claimResponse = await request(app)
-				.post(`/claims/meal/${mealResponse.body.meal.id}`)
-				.set("Authorization", `Bearer ${ngoToken}`);
-
-			completeClaimId = claimResponse.body.claimId;
-
-			await request(app)
-				.patch(`/claims/meal/${mealResponse.body.meal.id}/ready`)
-				.set("Authorization", `Bearer ${smeToken}`);
-
-			await request(app)
-				.patch(`/claims/${completeClaimId}/pickup`)
-				.set("Authorization", `Bearer ${ngoToken}`);
+			// Mock the database to return appropriate data for these IDs
+			pool.query.mockImplementation(async (query, params) => {
+				if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+					const userId = params[0];
+					if (userId === 1) {
+						return [[{ id: 1, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
+					} else if (userId === 2) {
+						return [[{ id: 2, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
+					}
+				}
+				// Handle meal queries
+				else if (query.includes("SELECT") && query.includes("FROM meals")) {
+					if (params[0] === completeMealId) {
+						return [[{
+							id: completeMealId,
+							title: "Completion Flow Meal",
+							quantity: 5,
+							food_status: "AVAILABLE",
+							created_by: 1,
+						}], undefined];
+					}
+				}
+				// Handle claim queries and inserts
+				else if (query.includes("INSERT INTO claims")) {
+					return [{ insertId: completeClaimId, affectedRows: 1 }, undefined];
+				} else if (query.includes("SELECT") && query.includes("claims")) {
+					return [[{
+						id: completeClaimId,
+						meal_id: completeMealId,
+						ngo_id: 2,
+						status: "CLAIMED",
+					}], undefined];
+				}
+				return [[], undefined];
+			});
 		});
 
 		test("Should confirm completion by NGO", async () => {

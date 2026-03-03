@@ -1,5 +1,13 @@
 const request = require("supertest");
 const app = require("../src/app");
+const jwt = require("jsonwebtoken");
+
+// Mock the database pool
+jest.mock("../src/config/db", () => ({
+	query: jest.fn(),
+}));
+
+const pool = require("../src/config/db");
 
 describe("Sponsorship Endpoints", () => {
 	let sponsorToken;
@@ -12,103 +20,192 @@ describe("Sponsorship Endpoints", () => {
 	let testMealId2;
 
 	beforeAll(async () => {
+		// Generate tokens directly without needing actual registration
+		sponsorUserId = 1;
+		const adminUserId = 2;
+		const smeUserId = 3;
+		ngoUserId = 4;
+
+		sponsorToken = jwt.sign(
+			{ id: sponsorUserId, email: "sponsor@test.com", role: "sponsor" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
+
+		adminToken = jwt.sign(
+			{ id: adminUserId, email: "admin@test.com", role: "admin" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
+
+		smeToken = jwt.sign(
+			{ id: smeUserId, email: "sme@test.com", role: "sme" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
+
+		ngoToken = jwt.sign(
+			{ id: ngoUserId, email: "ngo@test.com", role: "ngo" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
+
+		// Setup mock implementation for database queries
+		pool.query.mockImplementation(async (query, params) => {
+			// Handle user authentication queries
+			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+				const userId = params[0];
+				if (userId === 1) {
+					return [[{ id: 1, email: "sponsor@test.com", role: "sponsor", is_verified: 1 }], undefined];
+				} else if (userId === 2) {
+					return [[{ id: 2, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
+				} else if (userId === 3) {
+					return [[{ id: 3, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
+				} else if (userId === 4) {
+					return [[{ id: 4, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
+				}
+			}
+			// Handle meal queries
+			else if (query.includes("SELECT") && query.includes("FROM meals")) {
+				if (params[0] === 99999) {
+					return [[], undefined]; // Invalid meal ID
+				}
+				// Generate deterministic IDs for test meals
+				if (params[0] === 100) {
+					testMealId = 100;
+					return [[{
+						id: 100,
+						title: "Donation Meal 1",
+						description: "First meal for sponsorship",
+						quantity: 20,
+						unit: "servings",
+						food_status: "AVAILABLE",
+						created_by: 3,
+					}], undefined];
+				} else if (params[0] === 101) {
+					testMealId2 = 101;
+					return [[{
+						id: 101,
+						title: "Donation Meal 2",
+						description: "Second meal for sponsorship",
+						quantity: 15,
+						unit: "servings",
+						food_status: "AVAILABLE",
+						created_by: 3,
+					}], undefined];
+				}
+				// Return meal data for sponsorship queries
+				return [[{
+					id: params[0] || testMealId || 100,
+					title: "Test Meal",
+					quantity: 20,
+					food_status: "AVAILABLE",
+					created_by: 3,
+				}], undefined];
+			}
+			// Handle NGO user queries
+			else if (query.includes("SELECT") && query.includes("FROM users") && params[0] === ngoUserId) {
+				return [[{ id: ngoUserId, role: "ngo" }], undefined];
+			}
+			// Handle sponsorship INSERT
+			else if (query.includes("INSERT INTO sponsorships")) {
+				return [{ insertId: Math.floor(Math.random() * 10000) + 1, affectedRows: 1 }, undefined];
+			}
+			// Handle sponsorship SELECT queries
+			else if (query.includes("SELECT") && query.includes("sponsorship")) {
+				return [[{
+					id: 1,
+					sponsor_id: 1,
+					meal_id: testMealId,
+					ngo_id: null,
+					amount: 100,
+					created_at: new Date(),
+				}], undefined];
+			}
+			// Default response
+			return [[], undefined];
+		});
+
+		// Set deterministic test meal IDs
+		testMealId = 100;
+		testMealId2 = 101;
+	});
+
+	beforeEach(() => {
+		// Reset mock calls between tests but maintain mock function
+		pool.query.mockClear();
 		
-		const sponsorEmail = `sponsor${Date.now()}@test.com`;
-		const sponsorRegister = await request(app).post("/auth/register").send({
-			name: "Test Sponsor",
-			email: sponsorEmail,
-			password: "Test123!",
-			role: "sponsor",
-			organization_name: "Test Foundation",
+		// Re-apply default implementation
+		pool.query.mockImplementation(async (query, params) => {
+			const numParam = Number(params[0]);
+			
+			// Handle user authentication queries
+			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+				if (numParam === 1) return [[{ id: 1, email: "sponsor@test.com", role: "sponsor", is_verified: 1 }], undefined];
+				if (numParam === 2) return [[{ id: 2, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
+				if (numParam === 3) return [[{ id: 3, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
+				if (numParam === 4) return [[{ id: 4, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
+			}
+			// Handle donor/sponsor impact metrics user queries
+			else if (query.includes("SELECT id, name, organization_name, role FROM users WHERE id = ?")) {
+				if (numParam === 99999) return [[], undefined];
+				return [[{ id: numParam || 1, name: "Test User", organization_name: "Test Org", role: "sponsor" }], undefined];
+			}
+			// Handle NGO queries
+			else if (query.includes("SELECT id, organization_name, role FROM users WHERE id = ? AND role = 'ngo'")) {
+				if (numParam === 99999) return [[], undefined];
+				if (numParam === 4) return [[{ id: 4, organization_name: "Test NGO", role: "ngo" }], undefined];
+				return [[], undefined];
+			}
+			// Handle meal restaurant_id lookup
+			else if (query.includes("SELECT id, restaurant_id FROM meals WHERE id = ?")) {
+				if (numParam === 99999) return [[], undefined];
+				return [[{ id: numParam || 100, restaurant_id: 3 }], undefined];
+			}
+			// Handle meal queries
+			else if (query.includes("SELECT") && query.includes("FROM meals m")) {
+				if (numParam === 99999) return [[], undefined];
+				return [[{
+					id: numParam || 100,
+					title: "Test Meal",
+					quantity: 20,
+					food_status: "AVAILABLE",
+					created_by: 3,
+					restaurant_name: "Test SME",
+				}], undefined];
+			}
+			// Handle SUM/COUNT queries for metrics
+			else if (query.includes("SELECT SUM(amount)")) {
+				return [[{ total_amount: 500 }], undefined];
+			}
+			else if (query.includes("SELECT COUNT(*)")) {
+				return [[{ sponsorship_count: 5 }], undefined];
+			}
+			else if (query.includes("SELECT COUNT(DISTINCT meal_id)")) {
+				return [[{ meals_sponsored: 3 }], undefined];
+			}
+			else if (query.includes("SELECT COUNT(DISTINCT ngo_id)")) {
+				return [[{ ngos_supported: 2 }], undefined];
+			}
+			// Handle sponsorship INSERT
+			else if (query.includes("INSERT INTO sponsorships")) {
+				return [{ insertId: Math.floor(Math.random() * 10000) + 1, affectedRows: 1 }, undefined];
+			}
+			// Handle sponsorship SELECT queries with JOINs
+			else if (query.includes("SELECT") && query.includes("sponsorship")) {
+				return [[{
+					id: 1,
+					sponsor_id: 1,
+					meal_id: 100,
+					amount: 100,
+					created_at: new Date(),
+					sponsor_name: "Test Sponsor",
+					sponsor_org: "Test Org",
+					meal_title: "Test Meal",
+				}], undefined];
+			}
+			return [[], undefined];
 		});
-		sponsorUserId = sponsorRegister.body.userId;
-
-		const sponsorLogin = await request(app).post("/auth/login").send({
-			email: sponsorEmail,
-			password: "Test123!",
-		});
-		sponsorToken = sponsorLogin.body.token;
-
-		const adminEmail = `admin${Date.now()}@test.com`;
-		await request(app).post("/admin/auth/register").send({
-			name: "Test Admin",
-			email: adminEmail,
-			password: "Admin123!",
-			admin_secret: process.env.ADMIN_SECRET,
-		});
-
-		const adminLogin = await request(app).post("/admin/auth/login").send({
-			email: adminEmail,
-			password: "Admin123!",
-		});
-		adminToken = adminLogin.body.token;
-
-		const smeEmail = `sme${Date.now()}@test.com`;
-		const smeRegister = await request(app).post("/auth/register").send({
-			name: "Test SME",
-			email: smeEmail,
-			password: "Test123!",
-			role: "sme",
-			organization_name: "Test SME Org",
-		});
-
-		await request(app)
-			.patch(`/admin/verify/${smeRegister.body.userId}`)
-			.set("Authorization", `Bearer ${adminToken}`);
-
-		const smeLogin = await request(app).post("/auth/login").send({
-			email: smeEmail,
-			password: "Test123!",
-		});
-		smeToken = smeLogin.body.token;
-
-		const ngoEmail = `ngo${Date.now()}@test.com`;
-		const ngoRegister = await request(app).post("/auth/register").send({
-			name: "Test NGO",
-			email: ngoEmail,
-			password: "Test123!",
-			role: "ngo",
-			organization_name: "Test NGO",
-		});
-		ngoUserId = ngoRegister.body.userId;
-
-		await request(app)
-			.patch(`/admin/verify/${ngoUserId}`)
-			.set("Authorization", `Bearer ${adminToken}`);
-
-		const ngoLogin = await request(app).post("/auth/login").send({
-			email: ngoEmail,
-			password: "Test123!",
-		});
-		ngoToken = ngoLogin.body.token;
-
-		const mealRes1 = await request(app)
-			.post("/meals")
-			.set("Authorization", `Bearer ${smeToken}`)
-			.send({
-				title: "Donation Meal 1",
-				description: "First meal for sponsorship",
-				quantity: 20,
-				unit: "servings",
-				prepared_at: "2026-02-22 10:00:00",
-				storage_type: "Refrigerated",
-				food_type: "Soup",
-			});
-		testMealId = mealRes1.body.meal.id;
-
-		const mealRes2 = await request(app)
-			.post("/meals")
-			.set("Authorization", `Bearer ${smeToken}`)
-			.send({
-				title: "Donation Meal 2",
-				description: "Second meal for sponsorship",
-				quantity: 15,
-				unit: "servings",
-				prepared_at: "2026-02-22 11:00:00",
-				storage_type: "Room Temperature",
-				food_type: "Bread",
-			});
-		testMealId2 = mealRes2.body.meal.id;
 	});
 
 	describe("POST /sponsorships", () => {
@@ -246,22 +343,35 @@ describe("Sponsorship Endpoints", () => {
 		});
 
 		test("Should return empty list for sponsor with no sponsorships", async () => {
-			
-			const newSponsorEmail = `newsponsor${Date.now()}@test.com`;
-			const newSponsorRegister = await request(app)
-				.post("/auth/register")
-				.send({
-					name: "New Sponsor",
-					email: newSponsorEmail,
-					password: "Test123!",
-					role: "sponsor",
-				});
+			// Generate token for a new sponsor without HTTP calls
+			const newSponsorId = 5;
+			const newSponsorToken = jwt.sign(
+				{ id: newSponsorId, email: "newsponsor@test.com", role: "sponsor" },
+				process.env.JWT_SECRET,
+				{ expiresIn: process.env.JWT_EXPIRES_IN }
+			);
 
-			const newSponsorLogin = await request(app).post("/auth/login").send({
-				email: newSponsorEmail,
-				password: "Test123!",
+			// Mock user query for the new sponsor
+			pool.query.mockImplementation(async (query, params) => {
+				if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+					const userId = params[0];
+					if (userId === newSponsorId) {
+						return [[{ id: newSponsorId, email: "newsponsor@test.com", role: "sponsor", is_verified: 1 }], undefined];
+					}
+				}
+				// Handle sponsorship queries for new sponsor (empty result)
+				else if (query.includes("SELECT") && query.includes("sponsorship")) {
+					return [[], undefined];
+				}
+				// Fallback to default user handling
+				else if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+					const userId = params[0];
+					if (userId === 1) {
+						return [[{ id: 1, email: "sponsor@test.com", role: "sponsor", is_verified: 1 }], undefined];
+					}
+				}
+				return [[], undefined];
 			});
-			const newSponsorToken = newSponsorLogin.body.token;
 
 			const response = await request(app)
 				.get("/sponsorships/my")

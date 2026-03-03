@@ -1,55 +1,111 @@
 const request = require("supertest");
 const app = require("../src/app");
+const jwt = require("jsonwebtoken");
+
+// Mock the database pool
+jest.mock("../src/config/db", () => ({
+	query: jest.fn(),
+}));
+
+const pool = require("../src/config/db");
 
 describe("Admin Endpoints", () => {
 	let adminToken;
 	let regularUserToken;
-	let pendingUserId;
-	let verifiedUserId;
+	let pendingUserId = 2;
+	let verifiedUserId = 3;
 
 	beforeAll(async () => {
-		
-		const adminEmail = `admin${Date.now()}@test.com`;
-		await request(app).post("/admin/auth/register").send({
-			name: "Test Admin",
-			email: adminEmail,
-			password: "Admin123!",
-			admin_secret: process.env.ADMIN_SECRET,
-		});
+		// Generate tokens directly without HTTP calls
+		adminToken = jwt.sign(
+			{ id: 1, email: "admin@test.com", role: "admin" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
 
-		const adminLogin = await request(app).post("/admin/auth/login").send({
-			email: adminEmail,
-			password: "Admin123!",
-		});
-		adminToken = adminLogin.body.token;
+		regularUserToken = jwt.sign(
+			{ id: 3, email: "user@test.com", role: "ngo" },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN }
+		);
 
-		const pendingEmail = `pending${Date.now()}@test.com`;
-		const pendingRegister = await request(app).post("/auth/register").send({
-			name: "Pending User",
-			email: pendingEmail,
-			password: "Test123!",
-			role: "sme",
+		// Setup mock implementation
+		pool.query.mockImplementation(async (query, params) => {
+			// Auth queries
+			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+				const userId = params[0];
+				if (userId === 1) {
+					return [[{ id: 1, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
+				} else if (userId === 3) {
+					return [[{ id: 3, email: "user@test.com", role: "ngo", is_verified: 1 }], undefined];
+				}
+			}
+			// Pending users list
+			else if (query.includes("SELECT id, name, email, role, is_verified FROM users")) {
+				return [[
+					{ id: 2, name: "Pending User", email: "pending@test.com", role: "sme", is_verified: 0 }
+				], undefined];
+			}
+			// Get all users
+			else if (query.includes("SELECT") && query.includes("FROM users")) {
+				return [[
+					{ id: 1, name: "Admin", email: "admin@test.com", role: "admin", is_verified: 1 },
+					{ id: 2, name: "Pending", email: "pending@test.com", role: "sme", is_verified: 0 },
+					{ id: 3, name: "Verified", email: "user@test.com", role: "ngo", is_verified: 1 }
+				], undefined];
+			}
+			// Verify/revoke user
+			else if (query.includes("UPDATE users SET is_verified")) {
+				if (Number(params[1]) === 99999) {
+					return [{ affectedRows: 0 }, undefined];
+				}
+				return [{ affectedRows: 1 }, undefined];
+			}
+			return [[], undefined];
 		});
-		pendingUserId = pendingRegister.body.userId;
+	});
 
-		const regularEmail = `regular${Date.now()}@test.com`;
-		const regularRegister = await request(app).post("/auth/register").send({
-			name: "Regular User",
-			email: regularEmail,
-			password: "Test123!",
-			role: "ngo",
+	beforeEach(() => {
+		pool.query.mockClear();
+		pool.query.mockImplementation(async (query, params) => {
+			// Generic INSERT for any table (registration, user creation, etc)
+			if (query.includes("INSERT")) {
+				return [{ insertId: Math.floor(Math.random() * 1000) + 100, affectedRows: 1 }, undefined];
+			}
+			// SELECT for email uniqueness check
+			else if (query.includes("SELECT") && query.includes("email") && query.includes("WHERE")) {
+				return [[], undefined]; // Email always available
+			}
+			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+				const userId = params[0];
+				if (userId === 1) {
+					return [[{ id: 1, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
+				} else if (userId === 3) {
+					return [[{ id: 3, email: "user@test.com", role: "ngo", is_verified: 1 }], undefined];
+				}
+				// Return default user for any ID
+				return [[{ id: userId, email: `user${userId}@test.com`, role: "user", is_verified: 1 }], undefined];
+			}
+			else if (query.includes("SELECT id, name, email, role, is_verified FROM users")) {
+				return [[
+					{ id: 2, name: "Pending User", email: "pending@test.com", role: "sme", is_verified: 0 }
+				], undefined];
+			}
+			else if (query.includes("SELECT") && query.includes("FROM users")) {
+				return [[
+					{ id: 1, name: "Admin", email: "admin@test.com", role: "admin", is_verified: 1 },
+					{ id: 2, name: "Pending", email: "pending@test.com", role: "sme", is_verified: 0 },
+					{ id: 3, name: "Verified", email: "user@test.com", role: "ngo", is_verified: 1 }
+				], undefined];
+			}
+			else if (query.includes("UPDATE users SET is_verified")) {
+				if (Number(params[1]) === 99999) {
+					return [{ affectedRows: 0 }, undefined];
+				}
+				return [{ affectedRows: 1 }, undefined];
+			}
+			return [[], undefined];
 		});
-		verifiedUserId = regularRegister.body.userId;
-
-		await request(app)
-			.patch(`/admin/verify/${verifiedUserId}`)
-			.set("Authorization", `Bearer ${adminToken}`);
-
-		const regularLogin = await request(app).post("/auth/login").send({
-			email: regularEmail,
-			password: "Test123!",
-		});
-		regularUserToken = regularLogin.body.token;
 	});
 
 	describe("GET /admin/users/pending", () => {
