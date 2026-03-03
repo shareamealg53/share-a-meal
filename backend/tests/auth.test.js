@@ -1,8 +1,28 @@
 const request = require("supertest");
 const app = require("../src/app");
 
+// Mock the database pool
+jest.mock("../src/config/db", () => ({
+	query: jest.fn(),
+}));
+
+const pool = require("../src/config/db");
+const bcrypt = require("bcryptjs");
+
 describe("Auth Endpoints", () => {
+	beforeEach(() => {
+		jest.clearAllMocks();
+	});
+
 	describe("POST /auth/register", () => {
+		beforeEach(() => {
+			// Mock INSERT response for register
+			pool.query.mockResolvedValue([
+				{ insertId: 1, affectedRows: 1 },
+				undefined,
+			]);
+		});
+
 		test("Should register new SME user successfully", async () => {
 			const uniqueEmail = `sme${Date.now()}@test.com`;
 			const response = await request(app).post("/auth/register").send({
@@ -99,6 +119,12 @@ describe("Auth Endpoints", () => {
 		test("Should fail with duplicate email", async () => {
 			const email = `duplicate${Date.now()}@test.com`;
 
+			// Mock successful first register
+			pool.query.mockResolvedValueOnce([
+				{ insertId: 5, affectedRows: 1 },
+				undefined,
+			]);
+
 			await request(app).post("/auth/register").send({
 				name: "First User",
 				email: email,
@@ -106,6 +132,11 @@ describe("Auth Endpoints", () => {
 				role: "sme",
 				organization_name: "First Org",
 			});
+
+			// Mock duplicate key error for second register
+			const dupError = new Error("Duplicate entry");
+			dupError.code = "ER_DUP_ENTRY";
+			pool.query.mockRejectedValueOnce(dupError);
 
 			const response = await request(app).post("/auth/register").send({
 				name: "Second User",
@@ -115,7 +146,7 @@ describe("Auth Endpoints", () => {
 				organization_name: "Second Org",
 			});
 
-			expect(response.status).toBe(409); 
+			expect(response.status).toBe(409);
 			expect(response.body.code).toBe("ER_DUP_ENTRY");
 		});
 	});
@@ -123,19 +154,46 @@ describe("Auth Endpoints", () => {
 	describe("POST /auth/login", () => {
 		let testEmail;
 		let testPassword = "Test123!";
+		let hashedPassword;
 
 		beforeAll(async () => {
 			testEmail = `logintest${Date.now()}@test.com`;
-			await request(app).post("/auth/register").send({
-				name: "Login Test User",
-				email: testEmail,
-				password: testPassword,
-				role: "sme",
-				organization_name: "Login Org",
-			});
+			hashedPassword = await bcrypt.hash(testPassword, 10);
+
+			// Mock register insert
+			pool.query.mockResolvedValueOnce([
+				{ insertId: 2, affectedRows: 1 },
+				undefined,
+			]);
+		});
+
+		beforeEach(() => {
+			jest.clearAllMocks();
 		});
 
 		test("Should fail login for unverified user", async () => {
+			// Mock SELECT query returning unverified user
+			pool.query.mockResolvedValueOnce([
+				[
+					{
+						id: 2,
+						email: testEmail,
+						password: hashedPassword,
+						role: "sme",
+						is_verified: false,
+					},
+				],
+				undefined,
+			]);
+
+			await request(app).post("/auth/register").send({
+				name: "Unverified User",
+				email: testEmail,
+				password: testPassword,
+				role: "sme",
+				organization_name: "Test Org",
+			});
+
 			const response = await request(app).post("/auth/login").send({
 				email: testEmail,
 				password: testPassword,
@@ -148,7 +206,6 @@ describe("Auth Endpoints", () => {
 		test("Should fail with missing credentials", async () => {
 			const response = await request(app).post("/auth/login").send({
 				email: testEmail,
-				
 			});
 
 			expect(response.status).toBe(400);
@@ -156,9 +213,12 @@ describe("Auth Endpoints", () => {
 		});
 
 		test("Should fail with invalid email", async () => {
+			// Mock SELECT query returning no users
+			pool.query.mockResolvedValueOnce([[], undefined]);
+
 			const response = await request(app).post("/auth/login").send({
 				email: "nonexistent@test.com",
-				password: "SomePassword",
+				password: "SomePassword123!",
 			});
 
 			expect(response.status).toBe(401);
@@ -166,6 +226,20 @@ describe("Auth Endpoints", () => {
 		});
 
 		test("Should fail with wrong password", async () => {
+			// Mock SELECT query returning user
+			pool.query.mockResolvedValueOnce([
+				[
+					{
+						id: 2,
+						email: testEmail,
+						password: hashedPassword,
+						role: "sme",
+						is_verified: true,
+					},
+				],
+				undefined,
+			]);
+
 			const response = await request(app).post("/auth/login").send({
 				email: testEmail,
 				password: "WrongPassword123!",
@@ -174,11 +248,47 @@ describe("Auth Endpoints", () => {
 			expect(response.status).toBe(401);
 			expect(response.body.code).toBe("AUTH_FAILED");
 		});
+
+		test("Should login successfully with correct credentials", async () => {
+			// Mock SELECT query returning verified user
+			pool.query.mockResolvedValueOnce([
+				[
+					{
+						id: 2,
+						email: testEmail,
+						password: hashedPassword,
+						role: "sme",
+						is_verified: true,
+					},
+				],
+				undefined,
+			]);
+
+			const response = await request(app).post("/auth/login").send({
+				email: testEmail,
+				password: testPassword,
+			});
+
+			expect(response.status).toBe(200);
+			expect(response.body).toHaveProperty("token");
+			expect(response.body.message).toBe("Login successful");
+		});
 	});
 
 	describe("POST /admin/auth/register", () => {
+		beforeEach(() => {
+			jest.clearAllMocks();
+		});
+
 		test("Should register admin with valid secret", async () => {
 			const uniqueEmail = `admin${Date.now()}@test.com`;
+			
+			// Mock INSERT response for admin register
+			pool.query.mockResolvedValueOnce([
+				{ insertId: 3, affectedRows: 1 },
+				undefined,
+			]);
+
 			const response = await request(app).post("/admin/auth/register").send({
 				name: "Test Admin",
 				email: uniqueEmail,
@@ -230,18 +340,34 @@ describe("Auth Endpoints", () => {
 	describe("POST /admin/auth/login", () => {
 		let adminEmail;
 		let adminPassword = "Admin123!";
+		let hashedAdminPassword;
+		let regularEmail;
 
 		beforeAll(async () => {
 			adminEmail = `adminlogin${Date.now()}@test.com`;
-			await request(app).post("/admin/auth/register").send({
-				name: "Admin Login Test",
-				email: adminEmail,
-				password: adminPassword,
-				admin_secret: process.env.ADMIN_SECRET,
-			});
+			regularEmail = `regular${Date.now()}@test.com`;
+			hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
+		});
+
+		beforeEach(() => {
+			jest.clearAllMocks();
 		});
 
 		test("Should login admin successfully", async () => {
+			// Mock SELECT query returning active admin user
+			pool.query.mockResolvedValueOnce([
+				[
+					{
+						id: 3,
+						email: adminEmail,
+						password: hashedAdminPassword,
+						role: "admin",
+						is_verified: 1,
+					},
+				],
+				undefined,
+			]);
+
 			const response = await request(app).post("/admin/auth/login").send({
 				email: adminEmail,
 				password: adminPassword,
@@ -251,13 +377,27 @@ describe("Auth Endpoints", () => {
 			expect(response.body).toHaveProperty("token");
 			expect(response.body).toHaveProperty("user");
 			expect(response.body.user.role).toBe("admin");
-			expect(response.body.user.is_verified).toBe(1); 
+			expect(response.body.user.is_verified).toBe(1);
 		});
 
 		test("Should fail with invalid admin credentials", async () => {
+			// Mock SELECT query returning admin user
+			pool.query.mockResolvedValueOnce([
+				[
+					{
+						id: 3,
+						email: adminEmail,
+						password: hashedAdminPassword,
+						role: "admin",
+						is_verified: 1,
+					},
+				],
+				undefined,
+			]);
+
 			const response = await request(app).post("/admin/auth/login").send({
 				email: adminEmail,
-				password: "WrongPassword",
+				password: "WrongPassword123!",
 			});
 
 			expect(response.status).toBe(401);
@@ -265,19 +405,16 @@ describe("Auth Endpoints", () => {
 		});
 
 		test("Should fail login for non-admin user at admin endpoint", async () => {
-			
-			const regularEmail = `regular${Date.now()}@test.com`;
-			await request(app).post("/auth/register").send({
-				name: "Regular User",
-				email: regularEmail,
-				password: "Test123!",
-				role: "sme",
-				organization_name: "Regular Org",
-			});
+			const regularPassword = "Test123!";
+			const hashedRegularPassword = await bcrypt.hash(regularPassword, 10);
+
+			// Mock SELECT query returning NOTHING because the SQL filters for role='admin'
+			// If a non-admin user tries to login at /admin endpoint, they won't be found
+			pool.query.mockResolvedValueOnce([[], undefined]);
 
 			const response = await request(app).post("/admin/auth/login").send({
 				email: regularEmail,
-				password: "Test123!",
+				password: regularPassword,
 			});
 
 			expect(response.status).toBe(401);
