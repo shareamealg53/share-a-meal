@@ -84,3 +84,8 @@ backend/ml/*.pkl
 #docker-compose.yml
 #Dockerfile.local
 #*.dockerignore
+
+# Development/Testing Scripts (Optional - local utilities)
+*.ps1
+test-*.sh
+check-*.sh
