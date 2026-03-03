@@ -14,7 +14,7 @@
 			"description": "Development server"
 		},
 		{
-			"url": "https://shareameal-vw7s.onrender.com",
+			"url": "https://shareameal-api.onrender.com",
 			"description": "Production server (live)"
 		}
 	],
