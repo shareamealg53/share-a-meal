@@ -58,6 +58,44 @@ describe("Auth Endpoints", () => {
 			expect(response.body.code).toBe("INVALID_PARAM");
 		});
 
+		test("Should fail with invalid email format", async () => {
+			const response = await request(app).post("/auth/register").send({
+				name: "Test User",
+				email: "invalid-email",
+				password: "Test123!",
+				role: "sme",
+				organization_name: "Test Org",
+			});
+
+			expect(response.status).toBe(400);
+			expect(response.body.code).toBe("VALIDATION_ERROR");
+		});
+
+		test("Should fail with weak password", async () => {
+			const response = await request(app).post("/auth/register").send({
+				name: "Test User",
+				email: `weak${Date.now()}@test.com`,
+				password: "password",
+				role: "sme",
+				organization_name: "Test Org",
+			});
+
+			expect(response.status).toBe(400);
+			expect(response.body.code).toBe("WEAK_PASSWORD");
+		});
+
+		test("Should fail when SME has no organization name", async () => {
+			const response = await request(app).post("/auth/register").send({
+				name: "Test User",
+				email: `noorg${Date.now()}@test.com`,
+				password: "Test123!",
+				role: "sme",
+			});
+
+			expect(response.status).toBe(400);
+			expect(response.body.code).toBe("VALIDATION_ERROR");
+		});
+
 		test("Should fail with duplicate email", async () => {
 			const email = `duplicate${Date.now()}@test.com`;
 
@@ -66,6 +104,7 @@ describe("Auth Endpoints", () => {
 				email: email,
 				password: "Test123!",
 				role: "sme",
+				organization_name: "First Org",
 			});
 
 			const response = await request(app).post("/auth/register").send({
@@ -73,6 +112,7 @@ describe("Auth Endpoints", () => {
 				email: email,
 				password: "Test123!",
 				role: "ngo",
+				organization_name: "Second Org",
 			});
 
 			expect(response.status).toBe(409); 
@@ -91,6 +131,7 @@ describe("Auth Endpoints", () => {
 				email: testEmail,
 				password: testPassword,
 				role: "sme",
+				organization_name: "Login Org",
 			});
 		});
 
@@ -100,7 +141,8 @@ describe("Auth Endpoints", () => {
 				password: testPassword,
 			});
 
-			expect([200, 401, 403]).toContain(response.status);
+			expect(response.status).toBe(403);
+			expect(response.body.code).toBe("ACCOUNT_UNVERIFIED");
 		});
 
 		test("Should fail with missing credentials", async () => {
@@ -161,6 +203,18 @@ describe("Auth Endpoints", () => {
 			expect(response.body.code).toBe("FORBIDDEN");
 		});
 
+		test("Should fail admin register with weak password", async () => {
+			const response = await request(app).post("/admin/auth/register").send({
+				name: "Test Admin",
+				email: `weakadmin${Date.now()}@test.com`,
+				password: "admin",
+				admin_secret: process.env.ADMIN_SECRET,
+			});
+
+			expect(response.status).toBe(400);
+			expect(response.body.code).toBe("WEAK_PASSWORD");
+		});
+
 		test("Should fail with missing admin secret", async () => {
 			const response = await request(app).post("/admin/auth/register").send({
 				name: "Test Admin",
@@ -218,6 +272,7 @@ describe("Auth Endpoints", () => {
 				email: regularEmail,
 				password: "Test123!",
 				role: "sme",
+				organization_name: "Regular Org",
 			});
 
 			const response = await request(app).post("/admin/auth/login").send({

@@ -7,6 +7,8 @@ import styles from "./Login.module.css";
 import Openeye from "../../assets/Icons/eye-open.svg?react";
 import Closedeye from "../../assets/Icons/eye-closed.svg?react";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function Login() {
 	const {
 		register,
@@ -44,7 +46,6 @@ function Login() {
 		setLoading(true);
 		setServerMessage("");
 		try {
-			// Use centralized API helper
 			const result = await import("../../api").then((m) =>
 				m.apiRequest("/auth/login", {
 					method: "POST",
@@ -75,8 +76,15 @@ function Login() {
 
 				<div className={styles.inputGroup}>
 					<input
+						type="email"
 						placeholder="Email"
-						{...register("email", { required: "Email is required" })}
+						{...register("email", {
+							required: "Email is required",
+							pattern: {
+								value: EMAIL_REGEX,
+								message: "Enter a valid email address",
+							},
+						})}
 					/>
 					{errors.email && (
 						<p className={styles.error}>{errors.email.message}</p>
@@ -87,7 +95,13 @@ function Login() {
 						<input
 							type={showPassword ? "text" : "password"}
 							placeholder="Password"
-							{...register("password", { required: "Password is required" })}
+							{...register("password", {
+								required: "Password is required",
+								minLength: {
+									value: 8,
+									message: "Password must be at least 8 characters",
+								},
+							})}
 						/>
 						<span onClick={togglePassword}>
 							{showPassword ? <Openeye /> : <Closedeye />}
