@@ -1,0 +1,107 @@
+:root {
+  --primary: #2ecc71;
+  --secondary: #3498db;
+  --accent: #e74c3c;
+  --warm: #f39c12;
+}
+
+.container {
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.title {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 40px;
+  color: #2c3e50;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.statCard {
+  padding: 25px;
+  border: 2px solid #ecf0f1;
+  border-radius: 12px;
+  text-align: center;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.statCard:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.1);
+}
+
+.statCard h3 {
+  margin: 0 0 15px 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.statCard h2 {
+  margin: 0;
+  font-size: 2.5rem;
+  color: var(--primary);
+}
+
+.breakdown {
+  margin: 40px 0;
+}
+
+.breakdown h2 {
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.statusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 15px;
+}
+
+.statusItem {
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+  border-left: 4px solid var(--primary);
+}
+
+.statusItem p {
+  margin: 0 0 10px 0;
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  text-transform: uppercase;
+}
+
+.statusItem h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #2c3e50;
+}
+
+.storiesSection {
+  margin-top: 40px;
+  padding: 30px;
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f7ff 100%);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.storiesSection h2 {
+  color: #2c3e50;
+  margin: 0 0 15px 0;
+}
+
+.storiesSection p {
+  color: #34495e;
+  font-size: 1.1rem;
+  margin: 0;
+}

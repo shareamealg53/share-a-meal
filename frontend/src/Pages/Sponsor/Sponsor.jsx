@@ -1,10 +1,47 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./Sponsor.module.css";
 import Header from "../../Components/Header/Header"
 import Sidebar from "../../Components/SideBar/SideBar"
-// import Header from "../../components/Header/Header";
-// import Sidebar from "../../components/Sidebar/Sidebar";
+import { apiRequest } from "../../api";
 
 export default function Dashboard() {
+  const [sponsorships, setSponsorships] = useState({ my: [], impact: {} });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchSponsorData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        const [myRes, impactRes] = await Promise.all([
+          apiRequest("/sponsorships/my", { headers: { Authorization: `Bearer ${token}` } }),
+          apiRequest("/sponsorships/impact", { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        setSponsorships({
+          my: myRes.sponsorships || [],
+          impact: impactRes.metrics || {},
+        });
+      } catch (err) {
+        console.error("Error fetching sponsor data:", err);
+        setError(err?.message || "Failed to load dashboard");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSponsorData();
+  }, [navigate]);
+
+  if (loading) return <div style={{ padding: "20px" }}>Loading sponsor dashboard...</div>;
+  if (error) return <div style={{ padding: "20px", color: "red" }}>Error: {error}</div>;
   return (
     <div className={styles.layout}>
       <Sidebar />
@@ -43,17 +80,17 @@ export default function Dashboard() {
           <div className={styles.stats}>
             <div>
               <h4>Active Campaigns</h4>
-              <h2>12</h2>
+              <h2>{sponsorships.my?.length || 0}</h2>
             </div>
 
             <div>
               <h4>Meals Funded</h4>
-              <h2>248</h2>
+              <h2>{sponsorships.impact?.mealsSponored || 0}</h2>
             </div>
 
             <div>
               <h4>Total Impact</h4>
-              <h2>1,847</h2>
+              <h2>${sponsorships.impact?.totalAmountSponsored || 0}</h2>
             </div>
           </div>
 
