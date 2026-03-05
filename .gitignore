@@ -118,24 +118,21 @@ __pycache__/
 *.so
 .Python
 
-# Development utilities
-generate-swagger-spec.js
+# Development utilities (keep useful scripts tracked)
+# generate-swagger-spec.js is kept in repo
 
 # Vercel
 .vercel
 
-# Temporary directories
+# Temporary directories and OS temp files
 /tmp/
 /temp/
 .turbo/
 .next/
+*.exe
+*.dll
 
 # Lock files for development only (keep package-lock.json and yarn.lock checked in)
 # If making a library, consider uncommenting:
 # package-lock.json
 # yarn.lock
-
-# OS temporary files
-*.DS_Store
-*.exe
-*.dll
