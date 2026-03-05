@@ -104,6 +104,8 @@ setup-admin.ps1
 view-*.ps1
 test-*.sh
 check-*.sh
+test-endpoints.ps1
+test-integration.ps1
 
 # Jupyter notebooks (ML/data analysis)
 *.ipynb
