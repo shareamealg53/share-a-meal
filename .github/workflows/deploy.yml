@@ -156,7 +156,16 @@ jobs:
         run: cd backend && npm ci --omit=dev
 
       - name: Verify backend can start
-        run: cd backend && timeout 5 node src/app.js
+        run: |
+          cd backend
+          timeout 5 node src/app.js || EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 124 ] || [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Backend started successfully"
+            exit 0
+          else
+            echo "❌ Backend failed to start (exit code: $EXIT_CODE)"
+            exit 1
+          fi
         env:
           NODE_ENV: production
           PORT: 3000
