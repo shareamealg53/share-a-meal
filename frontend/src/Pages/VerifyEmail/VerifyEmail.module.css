@@ -1,0 +1,173 @@
+.verifyEmail {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	background-color: var(--Gray);
+	padding: 30px;
+}
+
+.container {
+	background: var(--White);
+	border: 1px solid var(--Gray);
+	border-radius: 12px;
+	padding: 30px;
+	max-width: 500px;
+	width: 100%;
+	text-align: center;
+}
+
+.iconContainer {
+	margin-bottom: 20px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 80px;
+}
+
+.spinner {
+	border: 4px solid var(--Gray);
+	border-top: 4px solid var(--Green);
+	border-radius: 50%;
+	width: 60px;
+	height: 60px;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+.successIcon {
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	background: var(--Green);
+	color: var(--White);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 3rem;
+	font-weight: bold;
+	animation: scaleIn 0.3s ease-in-out;
+}
+
+.errorIcon {
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	background: var(--Error);
+	color: var(--White);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 3rem;
+	font-weight: bold;
+	animation: scaleIn 0.3s ease-in-out;
+}
+
+.infoIcon {
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	background: var(--Green);
+	color: var(--White);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 3rem;
+	font-weight: bold;
+	animation: scaleIn 0.3s ease-in-out;
+}
+
+@keyframes scaleIn {
+	0% { transform: scale(0); }
+	50% { transform: scale(1.1); }
+	100% { transform: scale(1); }
+}
+
+.title {
+	font-size: 22px;
+	margin-bottom: 20px;
+	color: var(--Black);
+	font-weight: 600;
+}
+
+.message {
+	font-size: 14px;
+	color: var(--Black);
+	opacity: 0.75;
+	margin-bottom: 20px;
+	line-height: 1.6;
+}
+
+.actions {
+	margin-top: 20px;
+}
+
+.autoRedirect {
+	color: var(--Black);
+	opacity: 0.7;
+	font-size: 14px;
+	font-style: italic;
+}
+
+.loginButton {
+	display: inline-block;
+	background-color: var(--Green);
+	color: var(--White);
+	padding: 8px 16px;
+	border-radius: 8px;
+	text-decoration: none;
+	font-weight: 500;
+	transition: background-color 0.3s ease;
+}
+
+.loginButton:hover {
+	background-color: var(--LightGreen);
+}
+
+.helpText {
+	margin-top: 20px;
+	font-size: 14px;
+	color: var(--Black);
+	opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+	.container {
+		padding: 20px;
+	}
+
+	.title {
+		font-size: 20px;
+	}
+
+	.message {
+		font-size: 14px;
+	}
+
+	.iconContainer {
+		height: 60px;
+	}
+
+	.spinner,
+	.successIcon,
+	.errorIcon,
+	.infoIcon {
+		width: 60px;
+		height: 60px;
+		font-size: 2rem;
+	}
+}
+
+@media (min-width: 768px) {
+	.title {
+		font-size: 24px;
+	}
+
+	.container {
+		padding: 30px;
+	}
+}

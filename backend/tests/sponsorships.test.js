@@ -50,79 +50,73 @@ describe("Sponsorship Endpoints", () => {
 			{ expiresIn: process.env.JWT_EXPIRES_IN }
 		);
 
-		// Setup mock implementation for database queries
+		// Setup mock implementation with state management
+		global.mockDataStore.sponsorships = new Map([
+			[1, { id: 1, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 100, created_at: new Date() }],
+			[2, { id: 2, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 150, created_at: new Date() }],
+			[3, { id: 3, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 250, created_at: new Date() }],
+		]);
+
 		pool.query.mockImplementation(async (query, params) => {
-			// Handle user authentication queries
-			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
-				const userId = params[0];
-				if (userId === 1) {
-					return [[{ id: 1, email: "sponsor@test.com", role: "sponsor", is_verified: 1 }], undefined];
-				} else if (userId === 2) {
-					return [[{ id: 2, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
-				} else if (userId === 3) {
-					return [[{ id: 3, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
-				} else if (userId === 4) {
-					return [[{ id: 4, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
-				}
+			const store = global.mockDataStore;
+			
+			// Auth query: SELECT id, email, role, is_verified FROM users WHERE id = ?
+			if (query.includes("SELECT id, email, role, is_verified FROM users") && query.includes("WHERE id")) {
+				const user = store.users.get(params[0]);
+				if (!user) return [[], undefined];
+				return [[{ id: user.id, email: user.email, role: user.role, is_verified: user.is_verified }], undefined];
 			}
+
 			// Handle meal queries
-			else if (query.includes("SELECT") && query.includes("FROM meals")) {
-				if (params[0] === 99999) {
-					return [[], undefined]; // Invalid meal ID
-				}
-				// Generate deterministic IDs for test meals
-				if (params[0] === 100) {
-					testMealId = 100;
-					return [[{
-						id: 100,
-						title: "Donation Meal 1",
-						description: "First meal for sponsorship",
-						quantity: 20,
-						unit: "servings",
-						food_status: "AVAILABLE",
-						created_by: 3,
-					}], undefined];
-				} else if (params[0] === 101) {
-					testMealId2 = 101;
-					return [[{
-						id: 101,
-						title: "Donation Meal 2",
-						description: "Second meal for sponsorship",
-						quantity: 15,
-						unit: "servings",
-						food_status: "AVAILABLE",
-						created_by: 3,
-					}], undefined];
-				}
-				// Return meal data for sponsorship queries
-				return [[{
-					id: params[0] || testMealId || 100,
-					title: "Test Meal",
-					quantity: 20,
-					food_status: "AVAILABLE",
-					created_by: 3,
-				}], undefined];
+			if (query.includes("SELECT") && query.includes("FROM meals") && query.includes("WHERE")) {
+				const mealId = parseInt(params[0]);
+				if (mealId === 99999 || !mealId) return [[], undefined];
+				const meal = store.meals.get(mealId);
+				if (!meal) return [[], undefined];
+				return [[meal], undefined];
 			}
-			// Handle NGO user queries
-			else if (query.includes("SELECT") && query.includes("FROM users") && params[0] === ngoUserId) {
-				return [[{ id: ngoUserId, role: "ngo" }], undefined];
-			}
+
 			// Handle sponsorship INSERT
-			else if (query.includes("INSERT INTO sponsorships")) {
-				return [{ insertId: Math.floor(Math.random() * 10000) + 1, affectedRows: 1 }, undefined];
-			}
-			// Handle sponsorship SELECT queries
-			else if (query.includes("SELECT") && query.includes("sponsorship")) {
-				return [[{
-					id: 1,
-					sponsor_id: 1,
-					meal_id: testMealId,
-					ngo_id: null,
-					amount: 100,
+			if (query.includes("INSERT INTO sponsorships")) {
+				const sponsorshipId = Math.floor(Math.random() * 10000) + 100;
+				const sponsorship = {
+					id: sponsorshipId,
+					sponsor_id: params[0],
+					meal_id: params[1],
+					ngo_id: params[2] || null,
+					amount: params[3],
 					created_at: new Date(),
-				}], undefined];
+				};
+				store.sponsorships.set(sponsorshipId, sponsorship);
+				return [{ insertId: sponsorshipId, affectedRows: 1 }, undefined];
 			}
-			// Default response
+
+			// Get sponsorships by meal with aggregate
+			if (query.includes("SELECT") && query.includes("sponsorships") && query.includes("meal_id")) {
+				const mealId = parseInt(params[0]);
+				const sponsorshipsForMeal = Array.from(store.sponsorships.values()).filter(s => s.meal_id === mealId);
+				return [sponsorshipsForMeal, undefined];
+			}
+
+			// Get sponsorships by NGO with aggregate  
+			if (query.includes("SELECT") && query.includes("sponsorships") && query.includes("ngo_id")) {
+				const ngoId = parseInt(params[0]);
+				const sponsorshipsForNgo = Array.from(store.sponsorships.values()).filter(s => s.ngo_id === ngoId);
+				return [sponsorshipsForNgo, undefined];
+			}
+
+			// Get sponsorships by sponsor
+			if (query.includes("SELECT") && query.includes("sponsorships") && query.includes("sponsor_id")) {
+				const sponsorId = parseInt(params[0]);
+				const sponsorshipsForSponsor = Array.from(store.sponsorships.values()).filter(s => s.sponsor_id === sponsorId);
+				return [sponsorshipsForSponsor, undefined];
+			}
+
+			// Generic sponsorship query
+			if (query.includes("SELECT") && query.includes("sponsorship")) {
+				return [Array.from(store.sponsorships.values()), undefined];
+			}
+
 			return [[], undefined];
 		});
 
@@ -135,75 +129,165 @@ describe("Sponsorship Endpoints", () => {
 		// Reset mock calls between tests but maintain mock function
 		pool.query.mockClear();
 		
+		// Reset sponsorships data
+		global.mockDataStore.sponsorships = new Map([
+			[1, { id: 1, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 100, created_at: new Date() }],
+			[2, { id: 2, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 150, created_at: new Date() }],
+			[3, { id: 3, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 250, created_at: new Date() }],
+		]);
+
 		// Re-apply default implementation
 		pool.query.mockImplementation(async (query, params) => {
+			const store = global.mockDataStore;
 			const numParam = Number(params[0]);
 			
-			// Handle user authentication queries
-			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
-				if (numParam === 1) return [[{ id: 1, email: "sponsor@test.com", role: "sponsor", is_verified: 1 }], undefined];
-				if (numParam === 2) return [[{ id: 2, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
-				if (numParam === 3) return [[{ id: 3, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
-				if (numParam === 4) return [[{ id: 4, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
+			// Auth query: SELECT id, email, role, is_verified FROM users WHERE id = ?
+			if (query.includes("SELECT id, email, role, is_verified FROM users") && query.includes("WHERE id")) {
+				const user = store.users.get(numParam);
+				if (!user) return [[], undefined];
+				return [[{ id: user.id, email: user.email, role: user.role, is_verified: user.is_verified }], undefined];
 			}
+
 			// Handle donor/sponsor impact metrics user queries
-			else if (query.includes("SELECT id, name, organization_name, role FROM users WHERE id = ?")) {
+			if (query.includes("SELECT id, name, organization_name, role FROM users WHERE id = ?")) {
 				if (numParam === 99999) return [[], undefined];
 				return [[{ id: numParam || 1, name: "Test User", organization_name: "Test Org", role: "sponsor" }], undefined];
 			}
-			// Handle NGO queries
-			else if (query.includes("SELECT id, organization_name, role FROM users WHERE id = ? AND role = 'ngo'")) {
-				if (numParam === 99999) return [[], undefined];
-				if (numParam === 4) return [[{ id: 4, organization_name: "Test NGO", role: "ngo" }], undefined];
-				return [[], undefined];
+
+			// Handle NGO queries - SELECT id, role FROM users WHERE id = ? AND role = 'ngo'
+			if (query.includes("FROM users") && query.includes("role = 'ngo'")) {
+				const user = store.users.get(numParam);
+				if (!user || user.role !== "ngo") return [[], undefined];
+				return [[{ id: user.id, organization_name: user.email.split("@")[0] + " Org", role: user.role }], undefined];
 			}
+
+			// Handle organization name queries for NGOs
+			if (query.includes("SELECT id, organization_name, role FROM users WHERE id = ?")) {
+				const user = store.users.get(numParam);
+				if (!user) return [[], undefined];
+				return [[{ id: user.id, organization_name: user.email.split("@")[0] + " Org", role: user.role }], undefined];
+			}
+
+			// Handle meal lookup for getMealSponsors - SELECT id, title, status FROM meals WHERE id = ?
+			if (query.includes("SELECT id, title, status FROM meals WHERE id = ?")) {
+				if (numParam === 99999 || !numParam) return [[], undefined];
+				const meal = store.meals.get(numParam);
+				if (!meal) return [[], undefined];
+				return [[{ id: meal.id, title: meal.title, status: meal.food_status }], undefined];
+			}
+
 			// Handle meal restaurant_id lookup
-			else if (query.includes("SELECT id, restaurant_id FROM meals WHERE id = ?")) {
+			if (query.includes("SELECT id, restaurant_id FROM meals WHERE id = ?") || query.includes("SELECT id, created_by FROM meals WHERE id = ?")) {
 				if (numParam === 99999) return [[], undefined];
-				return [[{ id: numParam || 100, restaurant_id: 3 }], undefined];
+				const meal = store.meals.get(numParam);
+				if (!meal) return [[], undefined];
+				return [[{ id: meal.id, restaurant_id: meal.created_by, created_by: meal.created_by }], undefined];
 			}
-			// Handle meal queries
-			else if (query.includes("SELECT") && query.includes("FROM meals m")) {
+
+			// Handle meal queries with joins (alias m)
+			if (query.includes("SELECT") && query.includes("FROM meals m")) {
 				if (numParam === 99999) return [[], undefined];
+				const meal = store.meals.get(numParam);
+				if (!meal) return [[], undefined];
 				return [[{
-					id: numParam || 100,
-					title: "Test Meal",
-					quantity: 20,
-					food_status: "AVAILABLE",
-					created_by: 3,
+					id: meal.id,
+					title: meal.title,
+					quantity: meal.quantity,
+					food_status: meal.food_status,
+					created_by: meal.created_by,
 					restaurant_name: "Test SME",
 				}], undefined];
 			}
+
 			// Handle SUM/COUNT queries for metrics
-			else if (query.includes("SELECT SUM(amount)")) {
-				return [[{ total_amount: 500 }], undefined];
+			if (query.includes("SELECT SUM(amount)")) {
+				const sponsorshipsArr = Array.from(store.sponsorships.values());
+				const total = sponsorshipsArr.reduce((sum, s) => sum + s.amount, 0);
+				return [[{ total_amount: total }], undefined];
 			}
-			else if (query.includes("SELECT COUNT(*)")) {
-				return [[{ sponsorship_count: 5 }], undefined];
+			if (query.includes("SELECT COUNT(*)") && query.includes("sponsorships")) {
+				return [[{ sponsorship_count: store.sponsorships.size }], undefined];
 			}
-			else if (query.includes("SELECT COUNT(DISTINCT meal_id)")) {
-				return [[{ meals_sponsored: 3 }], undefined];
+			if (query.includes("SELECT COUNT(DISTINCT meal_id)")) {
+				const uniqueMeals = new Set(Array.from(store.sponsorships.values()).map(s => s.meal_id));
+				return [[{ meals_sponsored: uniqueMeals.size }], undefined];
 			}
-			else if (query.includes("SELECT COUNT(DISTINCT ngo_id)")) {
-				return [[{ ngos_supported: 2 }], undefined];
+			if (query.includes("SELECT COUNT(DISTINCT ngo_id)")) {
+				const uniqueNgos = new Set(Array.from(store.sponsorships.values()).filter(s => s.ngo_id).map(s => s.ngo_id));
+				return [[{ ngos_supported: uniqueNgos.size }], undefined];
 			}
+
 			// Handle sponsorship INSERT
-			else if (query.includes("INSERT INTO sponsorships")) {
-				return [{ insertId: Math.floor(Math.random() * 10000) + 1, affectedRows: 1 }, undefined];
-			}
-			// Handle sponsorship SELECT queries with JOINs
-			else if (query.includes("SELECT") && query.includes("sponsorship")) {
-				return [[{
-					id: 1,
-					sponsor_id: 1,
-					meal_id: 100,
-					amount: 100,
+			if (query.includes("INSERT INTO sponsorships")) {
+				const sponsorshipId = Math.floor(Math.random() * 10000) + 100;
+				const sponsorship = {
+					id: sponsorshipId,
+					sponsor_id: params[0],
+					meal_id: params[1],
+					ngo_id: params[2],
+					amount: params[3],
+					note: params[4],
 					created_at: new Date(),
+				};
+				store.sponsorships.set(sponsorshipId, sponsorship);
+				return [{ insertId: sponsorshipId, affectedRows: 1 }, undefined];
+			}
+
+			// Get sponsorships by sponsor with JOIN - WHERE s.sponsor_id = ?
+			if (query.includes("FROM sponsorships s") && query.includes("WHERE s.sponsor_id = ?")) {
+				const sponsorId = parseInt(params[0]);
+				const sponsorshipsForSponsor = Array.from(store.sponsorships.values()).filter(s => s.sponsor_id === sponsorId);
+				return [sponsorshipsForSponsor.map(s => ({
+					id: s.id,
+					sponsor_id: s.sponsor_id,
+					meal_id: s.meal_id,
+					ngo_id: s.ngo_id,
+					amount: s.amount,
+					note: s.note,
+					created_at: s.created_at,
+					meal_title: "Test Meal",
+					meal_status: "AVAILABLE",
+					ngo_name: "Test NGO Org",
+					ngo_id_alt: s.ngo_id,
+				})), undefined];
+			}
+
+			// Get sponsorships by meal with JOIN - WHERE s.meal_id = ?
+			if (query.includes("FROM sponsorships s") && query.includes("WHERE s.meal_id = ?")) {
+				const mealId = parseInt(params[0]);
+				const sponsorshipsForMeal = Array.from(store.sponsorships.values()).filter(s => s.meal_id === mealId);
+				return [sponsorshipsForMeal.map(s => ({
+					id: s.id,
+					sponsor_id: s.sponsor_id,
+					amount: s.amount,
+					note: s.note,
+					created_at: s.created_at,
 					sponsor_name: "Test Sponsor",
 					sponsor_org: "Test Org",
-					meal_title: "Test Meal",
-				}], undefined];
+				})), undefined];
 			}
+
+			// Get sponsorships by NGO with JOIN - WHERE s.ngo_id = ?
+			if (query.includes("FROM sponsorships s") && query.includes("WHERE s.ngo_id = ?")) {
+				const ngoId = parseInt(params[0]);
+				const sponsorshipsForNgo = Array.from(store.sponsorships.values()).filter(s => s.ngo_id === ngoId);
+				return [sponsorshipsForNgo.map(s => ({
+					id: s.id,
+					sponsor_id: s.sponsor_id,
+					amount: s.amount,
+					note: s.note,
+					created_at: s.created_at,
+					sponsor_name: "Test Sponsor",
+					sponsor_org: "Test Org",
+				})), undefined];
+			}
+
+			// Get sponsorships by sponsor ID (no WHERE clause, just IN params)
+			if (query.includes("FROM sponsorships") && query.includes("sponsor_id")) {
+				const sponsorshipsArr = Array.from(store.sponsorships.values());
+				return [sponsorshipsArr, undefined];
+			}
+
 			return [[], undefined];
 		});
 	});

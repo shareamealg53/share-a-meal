@@ -51,7 +51,9 @@ function Signup() {
 					body: JSON.stringify(payload),
 				}),
 			);
-			setServerMessage("Signup successful!");
+			setServerMessage(
+				"Registration successful! Please check your email to verify your account. The verification link expires in 24 hours."
+			);
 			setIsSuccess(true);
 		} catch (error) {
 			setServerMessage(error?.message || "Signup failed");
@@ -64,7 +66,7 @@ function Signup() {
 		if (isSuccess) {
 			const timer = setTimeout(() => {
 				navigate("/login");
-			}, 2000);
+			}, 4000);
 
 			return () => clearTimeout(timer);
 		}
@@ -211,7 +213,15 @@ function Signup() {
 				</p>
 			</form>
 
-			{serverMessage && <p>{serverMessage}</p>}
+			{serverMessage && (
+				<div
+					className={`${styles.statusCard} ${
+						isSuccess ? styles.statusSuccess : styles.statusError
+					}`}
+				>
+					<p>{serverMessage}</p>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -37,7 +37,7 @@ npm test
 npm test auth
 npm test meals
 npm test claims
-npm test admin
+npm test claims
 
 # Watch mode (re-runs on file changes)
 npm run test:watch
@@ -48,7 +48,7 @@ npm run test:coverage
 
 ## Test Files
 
-- **auth.test.js** - Authentication endpoints (register, login, admin auth)
+- **auth.test.js** - Authentication endpoints (register, login)
 - **meals.test.js** - Meal CRUD operations and listing
 - **claims.test.js** - Claim lifecycle (claim, pickup, complete, cancel)
 - **admin.test.js** - Admin verification and user management

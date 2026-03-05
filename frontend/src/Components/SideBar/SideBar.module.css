@@ -46,7 +46,8 @@
 }
 
 .badge {
-  background: #F6AD55;
+  background: var(--LightGreen);
+  color: var(--White);
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 0.7rem;

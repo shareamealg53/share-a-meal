@@ -2,7 +2,9 @@ version: "3.8"
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.local
     ports:
       - "3000:3000"
     environment:
@@ -14,7 +16,6 @@ services:
       DB_PASSWORD: sharemeal_password
       DB_NAME: sharemeal_test
       JWT_SECRET: dev_jwt_secret_key_change_in_production
-      ADMIN_SECRET: dev_admin_secret_change_in_production
     depends_on:
       mysql:
         condition: service_healthy

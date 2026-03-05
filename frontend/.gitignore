@@ -7,10 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs
 dist
 dist-ssr
 *.local
+
+# Testing
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+**/__tests__/
 
 # Editor directories and files
 .vscode/*
@@ -22,5 +32,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Deployment
 .vercel
+
+# Environment files (except example)
+.env
 .env*.local
+.env.production
+.env.development
+
+# Temporary files
+*.tmp
+.cache/

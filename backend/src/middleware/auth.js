@@ -52,10 +52,10 @@ const requireRole = (...roles) => {
 
 const requireVerified = (req, res, next) => {
 
-	if (!req.user.is_verified && req.user.role !== "admin") {
+	if (!req.user.is_verified) {
 		return next(
 			new AppError(
-				"Account not verified - please contact admin",
+				"Account not verified",
 				403,
 				"NOT_VERIFIED",
 			),

@@ -8,7 +8,11 @@ import { FaBars } from "react-icons/fa";
 
 const DashLayout = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const user = { type: "ngo", name: "Hope Alive NGO" };
+  const savedRole = (localStorage.getItem("role") || "ngo").toLowerCase();
+  const user = {
+    type: savedRole,
+    name: localStorage.getItem("orgName") || "Share A Meal User",
+  };
   let dashboardComponent;
 
   if (user.type === "ngo") {

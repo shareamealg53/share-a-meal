@@ -149,3 +149,27 @@ input::placeholder {
     font-size: 24px;
   }
 }
+
+.resendButton {
+  margin-top: 1rem;
+  background-color: var(--Green);
+  color: var(--White);
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.resendButton:hover {
+  background-color: var(--LightGreen);
+}
+
+.resendButton:disabled {
+  background-color: var(--Gray);
+  color: var(--Black);
+  opacity: 0.7;
+  cursor: not-allowed;
+}

@@ -11,11 +11,13 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  role ENUM('sme', 'ngo', 'sponsor', 'admin') NOT NULL,
+  role ENUM('sme', 'ngo', 'sponsor') NOT NULL,
   organization_name VARCHAR(255),
   address TEXT,
   phone VARCHAR(20),
   is_verified BOOLEAN DEFAULT FALSE,
+  verification_token VARCHAR(255),
+  verification_token_expires DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -19,7 +19,6 @@ const { runAllGuards } = require("./jobs/mealGuards");
 
 // Routes
 const authRoutes = require("./routes/authRoutes");
-const adminRoutes = require("./routes/adminRoutes");
 const mealRoutes = require("./routes/mealRoutes");
 const claimRoutes = require("./routes/claimRoutes");
 const sponsorshipRoutes = require("./routes/sponsorshipRoutes");
@@ -104,7 +103,6 @@ app.use("/auth", authRoutes);
 app.use("/meals", mealRoutes);
 app.use("/claims", claimRoutes);
 app.use("/sponsorships", sponsorshipRoutes);
-app.use("/admin", adminRoutes);
 app.use("/ai", aiRoutes);
 app.use("/metrics", metricsRoutes);
 

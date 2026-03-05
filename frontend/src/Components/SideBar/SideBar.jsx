@@ -9,6 +9,13 @@ import styles from "./SideBar.module.css";
 const Sidebar = ({ isMobileOpen, closeSidebar }) => {
   const navigate = useNavigate();
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("orgName");
+    navigate("/login");
+  };
+
   const menuItems = [
     { name: "Dashboard", path: "/ngo", icon: <FaThLarge /> },
     { name: "Browse Food", path: "/browse", icon: <FaSearch /> },
@@ -51,7 +58,7 @@ const Sidebar = ({ isMobileOpen, closeSidebar }) => {
         </nav>
 
         <div className={styles.footer}>
-          <button className={styles.logoutBtn} onClick={() => navigate("/")}>
+          <button className={styles.logoutBtn} onClick={handleLogout}>
             <FaSignOutAlt /> <span>Logout</span>
           </button>
         </div>

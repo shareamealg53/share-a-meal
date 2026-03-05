@@ -19,14 +19,14 @@
 
 .card {
   flex: 1;
-  background: #f5f5f5;
+  background: var(--Gray);
   padding: 20px;
   border-radius: 12px;
 }
 
 .greenCard {
-  background: #1B5E20;
-  color: white;
+  background: var(--Green);
+  color: var(--White);
 }
 
 .recommendations {
@@ -37,16 +37,16 @@
 
 .recommendCard {
   flex: 1;
-  background: white;
+  background: var(--White);
   padding: 20px;
   border-radius: 12px;
-  border: 1px solid #eee;
+  border: 1px solid var(--Border);
 }
 
 .reserveBtn {
   margin-top: 10px;
-  background: #1B5E20;
-  color: white;
+  background: var(--Green);
+  color: var(--White);
   border: none;
   padding: 8px 16px;
   border-radius: 8px;
@@ -71,8 +71,8 @@
 }
 
 .count {
-  background: #e8f5e9;
-  color: #1B5E20;
+  background: var(--Gray);
+  color: var(--Green);
   font-size: 12px;
   padding: 3px 8px;
   border-radius: 20px;
@@ -82,7 +82,7 @@
 .matchText {
   margin: 4px 0 0;
   font-size: 14px;
-  color: #6b7280; 
+  color: var(--Muted); 
 }
 
 /* =========================

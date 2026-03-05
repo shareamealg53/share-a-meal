@@ -15,13 +15,13 @@ describe("Meal Endpoints", () => {
 	let smeUserId;
 	let ngoToken;
 	let ngoUserId;
-	let adminToken;
+	let sponsorToken;
 	let testMealId;
 	beforeAll(async () => {
 		// Generate tokens directly without needing actual registration
 		smeUserId = 1;
 		const ngoUserId = 2;
-		const adminUserId = 3;
+		const sponsorUserId = 3;
 
 		smeToken = jwt.sign(
 			{ id: smeUserId, email: "sme@test.com", role: "sme" },
@@ -35,8 +35,8 @@ describe("Meal Endpoints", () => {
 			{ expiresIn: process.env.JWT_EXPIRES_IN }
 		);
 
-		adminToken = jwt.sign(
-			{ id: adminUserId, email: "admin@test.com", role: "admin" },
+		sponsorToken = jwt.sign(
+			{ id: sponsorUserId, email: "sponsor@test.com", role: "sponsor" },
 			process.env.JWT_SECRET,
 			{ expiresIn: process.env.JWT_EXPIRES_IN }
 		);
@@ -73,12 +73,12 @@ describe("Meal Endpoints", () => {
 						undefined,
 					];
 				} else if (userId === 3) {
-					// Admin user
+					// Sponsor user
 					return [
 						[{
 							id: 3,
-							email: "admin@test.com",
-							role: "admin",
+							email: "sponsor@test.com",
+							role: "sponsor",
 							is_verified: 1,
 						}],
 						undefined,

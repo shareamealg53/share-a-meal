@@ -5,7 +5,7 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
 }
 
 .navContainer {
@@ -48,7 +48,7 @@
   display: none;
   font-size: 1.8rem;
   cursor: pointer;
-  color: #333;
+  color: var(--Black);
 }
 
 .mobileMenu {
@@ -71,7 +71,7 @@
     top: 100%;
     left: 0;
     /* width: 100%; */
-    background: white;
+    background: var(--White);
     padding: 2rem;
     gap: 1.5rem;
     box-shadow: 0 5px 10px rgba(0,0,0,0.1);

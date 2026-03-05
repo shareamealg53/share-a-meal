@@ -1,2153 +1,252 @@
 {
-	"openapi": "3.0.0",
-	"info": {
-		"title": "Share-a-Meal API",
-		"version": "2.0.0",
-		"description": "Trust-first coordination engine for verified food sharing between SMEs, NGOs, sponsors, and admins.",
-		"contact": {
-			"name": "Share-a-Meal Team"
-		}
-	},
-	"servers": [
-		{
-			"url": "http://localhost:3000",
-			"description": "Development server"
-		},
-		{
-			"url": "https://your-app-name.onrender.com",
-			"description": "Production server (update this URL after deployment)"
-		}
-	],
-	"components": {
-		"securitySchemes": {
-			"bearerAuth": {
-				"type": "http",
-				"scheme": "bearer",
-				"bearerFormat": "JWT",
-				"description": "JWT token obtained from /auth/login"
-			}
-		},
-		"schemas": {
-			"User": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "integer"
-					},
-					"name": {
-						"type": "string"
-					},
-					"email": {
-						"type": "string",
-						"format": "email"
-					},
-					"role": {
-						"type": "string",
-						"enum": ["sme", "ngo", "sponsor", "admin"]
-					},
-					"organization_name": {
-						"type": "string"
-					},
-					"address": {
-						"type": "string"
-					},
-					"phone": {
-						"type": "string"
-					},
-					"is_verified": {
-						"type": "boolean"
-					},
-					"created_at": {
-						"type": "string",
-						"format": "date-time"
-					}
-				}
-			},
-			"Meal": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "integer"
-					},
-					"sme_id": {
-						"type": "integer"
-					},
-					"title": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string"
-					},
-					"quantity": {
-						"type": "number"
-					},
-					"unit": {
-						"type": "string",
-						"enum": [
-							"kg",
-							"servings",
-							"packs",
-							"loaves",
-							"pieces",
-							"boxes",
-							"trays",
-							"bags"
-						]
-					},
-					"storage_type": {
-						"type": "string",
-						"enum": ["Room Temperature", "Refrigerated"]
-					},
-					"food_type": {
-						"type": "string",
-						"enum": ["Bread", "Rice", "Pastries", "Soup", "Beans", "Others"]
-					},
-					"food_status": {
-						"type": "string",
-						"enum": ["Fresh", "Moderate", "Spoiled"]
-					},
-					"prepared_at": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"expiry_at": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"status": {
-						"type": "string",
-						"enum": [
-							"AVAILABLE",
-							"CLAIMED",
-							"PICKUP_READY",
-							"PICKED_UP",
-							"COMPLETED",
-							"EXPIRED",
-							"CANCELLED"
-						]
-					},
-					"created_at": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updated_at": {
-						"type": "string",
-						"format": "date-time"
-					}
-				}
-			},
-			"Claim": {
-				"type": "object",
-				"properties": {
-					"id": {
-						"type": "integer"
-					},
-					"meal_id": {
-						"type": "integer"
-					},
-					"ngo_id": {
-						"type": "integer"
-					},
-					"status": {
-						"type": "string",
-						"enum": ["ACTIVE", "CANCELLED", "COMPLETED"]
-					},
-					"claimed_at": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"picked_up_at": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"completed_at": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					}
-				}
-			},
-			"Error": {
-				"type": "object",
-				"properties": {
-					"status": {
-						"type": "string",
-						"example": "error"
-					},
-					"message": {
-						"type": "string",
-						"example": "Invalid authentication token. Please log in again."
-					},
-					"code": {
-						"type": "string",
-						"example": "JWT_INVALID"
-					},
-					"details": {
-						"type": "object",
-						"nullable": true
-					},
-					"timestamp": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"path": {
-						"type": "string",
-						"example": "/auth/login"
-					},
-					"method": {
-						"type": "string",
-						"example": "POST"
-					}
-				}
-			}
-		}
-	},
-	"tags": [
-		{
-			"name": "Auth",
-			"description": "Authentication endpoints"
-		},
-		{
-			"name": "Admin",
-			"description": "Admin verification and management"
-		},
-		{
-			"name": "Meals",
-			"description": "Meal creation and listing"
-		},
-		{
-			"name": "Claims",
-			"description": "NGO claim lifecycle"
-		},
-		{
-			"name": "AI",
-			"description": "AI expiry and food status endpoints"
-		},
-		{
-			"name": "Metrics",
-			"description": "Analytics and reporting"
-		}
-	],
-	"paths": {
-		"/admin/auth/register": {
-			"post": {
-				"tags": ["Admin"],
-				"summary": "Register a new admin",
-				"description": "Create a new admin account (requires ADMIN_SECRET key from .env)",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": ["name", "email", "password", "admin_secret"],
-								"properties": {
-									"name": {
-										"type": "string",
-										"example": "Admin User"
-									},
-									"email": {
-										"type": "string",
-										"format": "email",
-										"example": "admin@shareamealdomain.com"
-									},
-									"password": {
-										"type": "string",
-										"format": "password",
-										"example": "AdminSecurePass123!"
-									},
-									"admin_secret": {
-										"type": "string",
-										"example": "your-secret-key-from-env"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"201": {
-						"description": "Admin registered successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Admin registered successfully"
-										},
-										"userId": {
-											"type": "integer",
-											"example": 1
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Missing required fields"
-					},
-					"403": {
-						"description": "Invalid admin secret key"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/admin/auth/login": {
-			"post": {
-				"tags": ["Admin"],
-				"summary": "Admin login",
-				"description": "Authenticate admin user and receive JWT token (separate from regular user login)",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": ["email", "password"],
-								"properties": {
-									"email": {
-										"type": "string",
-										"format": "email",
-										"example": "admin@shareamealdomain.com"
-									},
-									"password": {
-										"type": "string",
-										"format": "password",
-										"example": "AdminSecurePass123!"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Admin login successful",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Admin login successful"
-										},
-										"token": {
-											"type": "string",
-											"example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "integer"
-												},
-												"email": {
-													"type": "string"
-												},
-												"role": {
-													"type": "string",
-													"example": "admin"
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Missing credentials"
-					},
-					"401": {
-						"description": "Invalid admin credentials"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/admin/users/pending": {
-			"get": {
-				"tags": ["Admin"],
-				"summary": "Get all pending users",
-				"description": "Retrieve list of users waiting for admin verification (SMEs and NGOs)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved pending users",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/User"
-									}
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Admin role required"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/admin/users": {
-			"get": {
-				"tags": ["Admin"],
-				"summary": "Get all users",
-				"description": "Retrieve complete list of all users (verified and unverified)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved all users",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/User"
-									}
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Admin role required"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/admin/verify/{userId}": {
-			"patch": {
-				"tags": ["Admin"],
-				"summary": "Verify a user",
-				"description": "Approve and verify a SME or NGO account (enables them to create meals/claims)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "userId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the user to verify",
-						"example": 5
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "User verified successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "User verified successfully"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - User already verified or invalid user ID"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Admin role required"
-					},
-					"404": {
-						"description": "User not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/admin/revoke/{userId}": {
-			"patch": {
-				"tags": ["Admin"],
-				"summary": "Revoke user verification",
-				"description": "Remove verification status from a SME or NGO (disables their ability to create meals/claims)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "userId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the user to revoke verification from",
-						"example": 5
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Verification revoked successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Verification revoked"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - User not verified or invalid user ID"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Admin role required"
-					},
-					"404": {
-						"description": "User not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/ai/meal/{mealId}": {
-			"get": {
-				"tags": ["AI"],
-				"summary": "Get single meal for AI processing",
-				"description": "Retrieve detailed meal data for AI analysis (requires SERVICE_TOKEN)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal to retrieve",
-						"example": 1
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved meal data",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Meal"
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing SERVICE_TOKEN"
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/ai/meals": {
-			"get": {
-				"tags": ["AI"],
-				"summary": "Get batch of meals for AI processing",
-				"description": "Retrieve multiple meals for batch AI analysis (requires SERVICE_TOKEN). Supports filtering by status.",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "query",
-						"name": "status",
-						"schema": {
-							"type": "string",
-							"enum": [
-								"AVAILABLE",
-								"CLAIMED",
-								"READY_FOR_PICKUP",
-								"PICKED_UP",
-								"COMPLETED",
-								"EXPIRED",
-								"CANCELLED"
-							]
-						},
-						"description": "Filter meals by status",
-						"example": "AVAILABLE"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved meals",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/Meal"
-									}
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing SERVICE_TOKEN"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/ai/meal/{mealId}/expiry": {
-			"post": {
-				"tags": ["AI"],
-				"summary": "Set meal expiry timestamp",
-				"description": "AI sets calculated expiry time based on food type and storage conditions (requires SERVICE_TOKEN)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal",
-						"example": 1
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": ["expiry_at"],
-								"properties": {
-									"expiry_at": {
-										"type": "string",
-										"format": "date-time",
-										"example": "2026-02-22T18:00:00Z"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Expiry timestamp set successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Expiry timestamp set successfully"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Invalid timestamp format"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing SERVICE_TOKEN"
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			},
-			"patch": {
-				"tags": ["AI"],
-				"summary": "Update meal expiry timestamp",
-				"description": "AI corrects previously set expiry time (requires SERVICE_TOKEN)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal",
-						"example": 1
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": ["expiry_at"],
-								"properties": {
-									"expiry_at": {
-										"type": "string",
-										"format": "date-time",
-										"example": "2026-02-22T20:00:00Z"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Expiry timestamp updated successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Expiry timestamp updated successfully"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Invalid timestamp format"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing SERVICE_TOKEN"
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/ai/meal/{mealId}/food-status": {
-			"patch": {
-				"tags": ["AI"],
-				"summary": "Update meal food status",
-				"description": "AI updates food quality assessment based on visual analysis (requires SERVICE_TOKEN)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal",
-						"example": 1
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": ["food_status"],
-								"properties": {
-									"food_status": {
-										"type": "string",
-										"enum": ["Fresh", "Moderate", "Spoiled"],
-										"example": "Fresh"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Food status updated successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Food status updated successfully"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Invalid food_status value"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing SERVICE_TOKEN"
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/auth/register": {
-			"post": {
-				"tags": ["Auth"],
-				"summary": "Register a new user",
-				"description": "Create a new user account (SME, NGO, or sponsor only - admin registration is separate)",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": ["name", "email", "password", "role"],
-								"properties": {
-									"name": {
-										"type": "string",
-										"example": "Pizza Palace"
-									},
-									"email": {
-										"type": "string",
-										"format": "email",
-										"example": "pizza@test.com"
-									},
-									"password": {
-										"type": "string",
-										"format": "password",
-										"example": "SMEPass123!"
-									},
-									"role": {
-										"type": "string",
-										"enum": ["sme", "ngo", "sponsor"],
-										"example": "sme"
-									},
-									"organization_name": {
-										"type": "string",
-										"example": "Pizza Palace Ltd"
-									},
-									"address": {
-										"type": "string",
-										"example": "456 Pizza St"
-									},
-									"phone": {
-										"type": "string",
-										"example": "9876543210"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"201": {
-						"description": "User registered successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Registration successful"
-										},
-										"user": {
-											"$ref": "#/components/schemas/User"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Validation error or missing fields",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Error"
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/auth/login": {
-			"post": {
-				"tags": ["Auth"],
-				"summary": "Login user",
-				"description": "Authenticate user and receive JWT token (SME, NGO, sponsor only - admin uses /admin/auth/login). After login: SME can create/manage meals and mark pickup-ready; NGO can claim meals and manage claim lifecycle; Sponsor can view public metrics.",
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": ["email", "password"],
-								"properties": {
-									"email": {
-										"type": "string",
-										"format": "email",
-										"example": "pizza@test.com"
-									},
-									"password": {
-										"type": "string",
-										"format": "password",
-										"example": "SMEPass123!"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Login successful",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Login successful"
-										},
-										"token": {
-											"type": "string",
-											"example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-										},
-										"user": {
-											"type": "object",
-											"properties": {
-												"id": {
-													"type": "integer"
-												},
-												"email": {
-													"type": "string"
-												},
-												"role": {
-													"type": "string"
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Missing credentials"
-					},
-					"401": {
-						"description": "Invalid credentials"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/claims/meal/{mealId}": {
-			"post": {
-				"tags": ["Claims"],
-				"summary": "Claim a meal",
-				"description": "NGO claims an available meal (requires verified NGO account)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal to claim",
-						"example": 1
-					}
-				],
-				"responses": {
-					"201": {
-						"description": "Meal claimed successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Meal claimed successfully"
-										},
-										"claim": {
-											"$ref": "#/components/schemas/Claim"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Meal already claimed or not available"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - NGO role required or account not verified"
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/claims/my": {
-			"get": {
-				"tags": ["Claims"],
-				"summary": "Get my claims",
-				"description": "Retrieve all claims made by the authenticated NGO",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved claims",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/Claim"
-									}
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - NGO role required"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/claims/{claimId}/cancel": {
-			"patch": {
-				"tags": ["Claims"],
-				"summary": "Cancel a claim",
-				"description": "NGO cancels their claim on a meal (returns meal to AVAILABLE status)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "claimId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the claim to cancel",
-						"example": 1
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Claim cancelled successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Claim cancelled successfully"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Claim already completed or invalid status"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Not the claim owner or NGO role required"
-					},
-					"404": {
-						"description": "Claim not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/claims/meal/{mealId}/ready": {
-			"patch": {
-				"tags": ["Claims"],
-				"summary": "Mark meal ready for pickup",
-				"description": "SME marks meal as ready for NGO to pick up",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal to mark as ready",
-						"example": 1
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Meal marked as ready for pickup",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Meal marked as ready for pickup"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Meal not claimed or invalid status"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Not the meal owner or SME role required"
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/claims/{claimId}/pickup": {
-			"patch": {
-				"tags": ["Claims"],
-				"summary": "Confirm pickup",
-				"description": "NGO confirms they have picked up the meal from SME",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "claimId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the claim to confirm pickup",
-						"example": 1
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Pickup confirmed successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Pickup confirmed"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Meal not ready or invalid status"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Not the claim owner or NGO role required"
-					},
-					"404": {
-						"description": "Claim not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/claims/{claimId}/complete": {
-			"patch": {
-				"tags": ["Claims"],
-				"summary": "Complete meal delivery",
-				"description": "NGO confirms meal has been distributed to beneficiaries (final step)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "claimId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the claim to mark as complete",
-						"example": 1
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Meal delivery completed successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Meal delivery completed"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Pickup not confirmed or invalid status"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Not the claim owner or NGO role required"
-					},
-					"404": {
-						"description": "Claim not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/meals": {
-			"get": {
-				"tags": ["Meals"],
-				"summary": "Get all meals",
-				"description": "Retrieve list of all meals (public endpoint, no authentication required)",
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved meals",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/Meal"
-									}
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			},
-			"post": {
-				"tags": ["Meals"],
-				"summary": "Create a new meal",
-				"description": "SME creates a meal listing (requires verified SME account)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"required": [
-									"food_name",
-									"quantity",
-									"unit",
-									"prep_time",
-									"storage_type",
-									"food_type"
-								],
-								"properties": {
-									"food_name": {
-										"type": "string",
-										"example": "Fresh Bread Loaves"
-									},
-									"quantity": {
-										"type": "number",
-										"format": "decimal",
-										"example": 50
-									},
-									"unit": {
-										"type": "string",
-										"enum": [
-											"kg",
-											"servings",
-											"packs",
-											"loaves",
-											"pieces",
-											"boxes",
-											"trays",
-											"bags"
-										],
-										"example": "loaves"
-									},
-									"prep_time": {
-										"type": "string",
-										"format": "time",
-										"example": "14:00:00"
-									},
-									"storage_type": {
-										"type": "string",
-										"enum": ["Refrigerated", "Frozen", "Dry Storage"],
-										"example": "Dry Storage"
-									},
-									"food_type": {
-										"type": "string",
-										"enum": ["Veg", "Non-Veg", "Vegan"],
-										"example": "Vegan"
-									},
-									"notes": {
-										"type": "string",
-										"example": "Best consumed within 24 hours"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"201": {
-						"description": "Meal created successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Meal created successfully"
-										},
-										"meal": {
-											"$ref": "#/components/schemas/Meal"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Validation error - Missing required fields"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Not verified or not a SME"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/meals/status/{status}": {
-			"get": {
-				"tags": ["Meals"],
-				"summary": "Get meals by status",
-				"description": "Filter meals by their current status (public endpoint)",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "status",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"enum": [
-								"AVAILABLE",
-								"CLAIMED",
-								"READY_FOR_PICKUP",
-								"IN_TRANSIT",
-								"COMPLETED",
-								"EXPIRED",
-								"CANCELLED"
-							]
-						},
-						"description": "Status to filter by",
-						"example": "AVAILABLE"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved meals",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/Meal"
-									}
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/meals/{mealId}": {
-			"get": {
-				"tags": ["Meals"],
-				"summary": "Get meal by ID",
-				"description": "Retrieve detailed information about a specific meal (public endpoint)",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal to retrieve",
-						"example": 1
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved meal",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Meal"
-								}
-							}
-						}
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			},
-			"patch": {
-				"tags": ["Meals"],
-				"summary": "Update a meal",
-				"description": "Update meal details (SMEs can only update their own meals)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal to update",
-						"example": 1
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"food_name": {
-										"type": "string",
-										"example": "Updated Bread Loaves"
-									},
-									"quantity": {
-										"type": "number",
-										"format": "decimal",
-										"example": 15
-									},
-									"pickup_by": {
-										"type": "string",
-										"format": "date-time",
-										"example": "2026-02-21T20:00:00Z"
-									},
-									"notes": {
-										"type": "string",
-										"example": "Updated description"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Meal updated successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Meal updated successfully"
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - Invalid fields"
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Not the meal owner or SME role required"
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			},
-			"delete": {
-				"tags": ["Meals"],
-				"summary": "Delete a meal",
-				"description": "Delete a meal listing (SMEs can only delete their own meals)",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of the meal to delete",
-						"example": 1
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Meal deleted successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"message": {
-											"type": "string",
-											"example": "Meal deleted successfully"
-										}
-									}
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - Not the meal owner or SME role required"
-					},
-					"404": {
-						"description": "Meal not found"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/meals/my/list": {
-			"get": {
-				"tags": ["Meals"],
-				"summary": "Get my meals",
-				"description": "Retrieve all meals created by the authenticated SME",
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved meals",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/Meal"
-									}
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized - Invalid or missing token"
-					},
-					"403": {
-						"description": "Forbidden - SME role required"
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/metrics": {
-			"get": {
-				"tags": ["Metrics"],
-				"summary": "Get overall metrics",
-				"description": "Retrieve overall impact metrics (total meals, kg saved, NGOs served, completion rate) - Public endpoint",
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved overall metrics",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"totalMeals": {
-											"type": "integer",
-											"example": 150
-										},
-										"totalKgSaved": {
-											"type": "number",
-											"format": "decimal",
-											"example": 450.5
-										},
-										"ngosServed": {
-											"type": "integer",
-											"example": 12
-										},
-										"completionRate": {
-											"type": "number",
-											"format": "percentage",
-											"example": 87.5
-										}
-									}
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/metrics/smes": {
-			"get": {
-				"tags": ["Metrics"],
-				"summary": "Get SME metrics",
-				"description": "Retrieve metrics for all SMEs (most meals donated, kg saved, etc.) - Public endpoint",
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved SME metrics",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"type": "object",
-										"properties": {
-											"sme_id": {
-												"type": "integer",
-												"example": 2
-											},
-											"sme_name": {
-												"type": "string",
-												"example": "Pizza Palace"
-											},
-											"total_meals": {
-												"type": "integer",
-												"example": 45
-											},
-											"total_kg": {
-												"type": "number",
-												"format": "decimal",
-												"example": 135
-											},
-											"ngos_served": {
-												"type": "integer",
-												"example": 8
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/metrics/ngos": {
-			"get": {
-				"tags": ["Metrics"],
-				"summary": "Get NGO metrics",
-				"description": "Retrieve metrics for all NGOs (most meals received, kg received, etc.) - Public endpoint",
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved NGO metrics",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"type": "object",
-										"properties": {
-											"ngo_id": {
-												"type": "integer",
-												"example": 3
-											},
-											"ngo_name": {
-												"type": "string",
-												"example": "Food Share Foundation"
-											},
-											"total_meals": {
-												"type": "integer",
-												"example": 30
-											},
-											"total_kg": {
-												"type": "number",
-												"format": "decimal",
-												"example": 90
-											},
-											"smes_partnered": {
-												"type": "integer",
-												"example": 5
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/metrics/status": {
-			"get": {
-				"tags": ["Metrics"],
-				"summary": "Get meal status breakdown",
-				"description": "Retrieve breakdown of meals by status (how many AVAILABLE, CLAIMED, COMPLETED, etc.) - Public endpoint",
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved status breakdown",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"type": "object",
-										"properties": {
-											"status": {
-												"type": "string",
-												"example": "COMPLETED"
-											},
-											"count": {
-												"type": "integer",
-												"example": 85
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/metrics/timeline": {
-			"get": {
-				"tags": ["Metrics"],
-				"summary": "Get activity timeline",
-				"description": "Retrieve daily activity timeline showing meals completed per day over last 30 days (for charts) - Public endpoint",
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved activity timeline",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"type": "object",
-										"properties": {
-											"date": {
-												"type": "string",
-												"format": "date",
-												"example": "2026-02-21"
-											},
-											"meals_completed": {
-												"type": "integer",
-												"example": 12
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/metrics/completion-time": {
-			"get": {
-				"tags": ["Metrics"],
-				"summary": "Get average completion time",
-				"description": "Retrieve average time from meal preparation to completion (efficiency metric) - Public endpoint",
-				"responses": {
-					"200": {
-						"description": "Successfully retrieved average completion time",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"averageHours": {
-											"type": "number",
-											"format": "decimal",
-											"example": 4.5
-										},
-										"averageMinutes": {
-											"type": "integer",
-											"example": 270
-										}
-									}
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Server error"
-					}
-				}
-			}
-		},
-		"/sponsorships": {
-			"post": {
-				"summary": "Create a new sponsorship (sponsor only)",
-				"tags": ["Sponsorships"],
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"meal_id": {
-										"type": "integer",
-										"description": "ID of meal to sponsor (optional if ngo_id provided)"
-									},
-									"ngo_id": {
-										"type": "integer",
-										"description": "ID of NGO to support (optional if meal_id provided)"
-									},
-									"amount": {
-										"type": "number",
-										"description": "Sponsorship amount in dollars"
-									},
-									"note": {
-										"type": "string",
-										"description": "Optional note from sponsor"
-									}
-								}
-							}
-						}
-					}
-				},
-				"responses": {
-					"201": {
-						"description": "Sponsorship created successfully"
-					},
-					"400": {
-						"description": "Invalid input or validation error"
-					},
-					"404": {
-						"description": "Meal or NGO not found"
-					}
-				}
-			}
-		},
-		"/sponsorships/my": {
-			"get": {
-				"summary": "Get sponsor's own sponsorships",
-				"tags": ["Sponsorships"],
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Sponsorships retrieved successfully"
-					},
-					"401": {
-						"description": "Unauthorized"
-					}
-				}
-			}
-		},
-		"/sponsorships/impact": {
-			"get": {
-				"summary": "Get sponsor's impact metrics",
-				"tags": ["Sponsorships"],
-				"security": [
-					{
-						"bearerAuth": []
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Impact metrics retrieved successfully"
-					},
-					"401": {
-						"description": "Unauthorized"
-					}
-				}
-			}
-		},
-		"/sponsorships/sponsors/{sponsorId}": {
-			"get": {
-				"summary": "Get sponsor impact metrics (admin access)",
-				"tags": ["Sponsorships"],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sponsorId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of sponsor"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Impact metrics retrieved successfully"
-					},
-					"404": {
-						"description": "Sponsor not found"
-					}
-				}
-			}
-		},
-		"/sponsorships/meals/{mealId}": {
-			"get": {
-				"summary": "Get all sponsors for a specific meal",
-				"tags": ["Sponsorships"],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "mealId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of meal"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Meal sponsors retrieved successfully"
-					},
-					"404": {
-						"description": "Meal not found"
-					}
-				}
-			}
-		},
-		"/sponsorships/ngos/{ngoId}": {
-			"get": {
-				"summary": "Get all sponsors for a specific NGO",
-				"tags": ["Sponsorships"],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "ngoId",
-						"required": true,
-						"schema": {
-							"type": "integer"
-						},
-						"description": "ID of NGO"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "NGO sponsors retrieved successfully"
-					},
-					"404": {
-						"description": "NGO not found"
-					}
-				}
-			}
-		}
-	}
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Share-a-Meal API",
+    "version": "2.0.0",
+    "description": "Trust-first coordination engine for verified food sharing between SMEs, NGOs, and sponsors.",
+    "contact": {
+      "name": "Share-a-Meal Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://your-app-name.onrender.com",
+      "description": "Production server (update this URL after deployment)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from /auth/login"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "sme",
+              "ngo",
+              "sponsor"
+            ]
+          },
+          "organization_name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "is_verified": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Meal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "sme_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "kg",
+              "servings",
+              "packs",
+              "loaves",
+              "pieces",
+              "boxes",
+              "trays",
+              "bags"
+            ]
+          },
+          "storage_type": {
+            "type": "string",
+            "enum": [
+              "Room Temperature",
+              "Refrigerated"
+            ]
+          },
+          "food_type": {
+            "type": "string",
+            "enum": [
+              "Bread",
+              "Rice",
+              "Pastries",
+              "Soup",
+              "Beans",
+              "Others"
+            ]
+          },
+          "food_status": {
+            "type": "string",
+            "enum": [
+              "Fresh",
+              "Moderate",
+              "Spoiled"
+            ]
+          },
+          "prepared_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiry_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "CLAIMED",
+              "PICKUP_READY",
+              "PICKED_UP",
+              "COMPLETED",
+              "EXPIRED",
+              "CANCELLED"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Claim": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "meal_id": {
+            "type": "integer"
+          },
+          "ngo_id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "CANCELLED",
+              "COMPLETED"
+            ]
+          },
+          "claimed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "picked_up_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "error"
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid authentication token. Please log in again."
+          },
+          "code": {
+            "type": "string",
+            "example": "JWT_INVALID"
+          },
+          "details": {
+            "type": "object",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
+            "type": "string",
+            "example": "/auth/login"
+          },
+          "method": {
+            "type": "string",
+            "example": "POST"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Authentication endpoints"
+    },
+    {
+      "name": "Meals",
+      "description": "Meal creation and listing"
+    },
+    {
+      "name": "Claims",
+      "description": "NGO claim lifecycle"
+    },
+    {
+      "name": "AI",
+      "description": "AI expiry and food status endpoints"
+    },
+    {
+      "name": "Metrics",
+      "description": "Analytics and reporting"
+    }
+  ],
+  "paths": {}
 }

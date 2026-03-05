@@ -20,7 +20,6 @@ const sanitizeAuthPayload = (req, res, next) => {
 	req.body.organization_name = normalizeString(req.body.organization_name);
 	req.body.address = normalizeString(req.body.address);
 	req.body.phone = normalizeString(req.body.phone);
-	req.body.admin_secret = normalizeString(req.body.admin_secret);
 
 	return next();
 };
@@ -141,71 +140,6 @@ const validateUserLogin = (req, res, next) => {
 	return next();
 };
 
-const validateAdminRegistration = (req, res, next) => {
-	const { name, email, password, admin_secret } = req.body;
-
-	if (!name || !email || !password || !admin_secret) {
-		return next(
-			new AppError("Missing required fields", 400, "VALIDATION_ERROR", {
-				fields: ["name", "email", "password", "admin_secret"],
-			}),
-		);
-	}
-
-	if (!NAME_REGEX.test(name)) {
-		return next(
-			new AppError(
-				"Name must be 2-80 characters and contain only letters, spaces, apostrophes, hyphens, or dots",
-				400,
-				"VALIDATION_ERROR",
-				{ field: "name" },
-			),
-		);
-	}
-
-	if (!EMAIL_REGEX.test(email)) {
-		return next(
-			new AppError("Invalid email format", 400, "VALIDATION_ERROR", {
-				field: "email",
-			}),
-		);
-	}
-
-	if (!PASSWORD_REGEX.test(password)) {
-		return next(
-			new AppError(
-				"Password must be 8-72 characters with uppercase, lowercase, number, and special character",
-				400,
-				"WEAK_PASSWORD",
-				{ field: "password" },
-			),
-		);
-	}
-
-	return next();
-};
-
-const validateAdminLogin = (req, res, next) => {
-	const { email, password } = req.body;
-
-	if (!email || !password) {
-		return next(
-			new AppError("Email and password required", 400, "VALIDATION_ERROR", {
-				fields: ["email", "password"],
-			}),
-		);
-	}
-
-	if (!EMAIL_REGEX.test(email)) {
-		return next(
-			new AppError("Invalid email format", 400, "VALIDATION_ERROR", {
-				field: "email",
-			}),
-		);
-	}
-
-	return next();
-};
 
 const validateIdParam = (paramName) => (req, res, next) => {
 	const raw = req.params?.[paramName];
@@ -230,6 +164,4 @@ module.exports = {
 	sanitizeAuthPayload,
 	validateUserRegistration,
 	validateUserLogin,
-	validateAdminRegistration,
-	validateAdminLogin,
 };

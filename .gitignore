@@ -3,7 +3,6 @@
 .env.local
 .env.*.local
 .env.test
-.env.example
 
 # Dependencies
 node_modules/
@@ -26,18 +25,24 @@ Thumbs.db
 .AppleDouble
 .LSOverride
 
-# Build outputs
+# Build outputs (frontend)
 dist/
 build/
 *.tsbuildinfo
 
-# Testing
+# Testing - test files and outputs
 coverage/
 .nyc_output/
-
-# Lock files (optional - uncomment if you want team flexibility on versions)
-# package-lock.json
-# yarn.lock
+tests/
+**/tests/
+test-output.txt
+test-results.txt
+test_output.txt
+full_test_output.txt
+test-*.txt
+jest.setup.js
+*.test.js
+*.spec.js
 
 # Temporary files
 *.tmp
@@ -45,12 +50,7 @@ coverage/
 temp/
 .cache/
 
-# Test outputs
-test-output.txt
-test-results.txt
-test-*.txt
-
-# Generated HTML/temporary files (except intentional docs)
+# Generated HTML/temporary files
 !docs/**/*.html
 
 # Temporary Claude/AI folders
@@ -62,7 +62,10 @@ tmpclaude-*/
 dump.sql
 backup.sql
 
-# Docker volumes
+# Docker local development files
+docker-compose.yml
+Dockerfile.local
+.dockerignore
 .docker/
 
 # Railway specific
@@ -72,20 +75,37 @@ backup.sql
 .pm2/
 ecosystem.config.js
 
-# Model files (do not commit pickle binaries)
+# ML model files (large binaries - download in production)
 *.pkl
 food_status_model.pkl
 backend/ml/*.pkl
 
-
+# Development documentation (not needed in production)
+EMAIL_VERIFICATION.md
 */docs
+docs/
 
-# Docker files
-#docker-compose.yml
-#Dockerfile.local
-#*.dockerignore
-
-# Development/Testing Scripts (Optional - local utilities)
+# Development/Testing Scripts
 *.ps1
 test-*.sh
 check-*.sh
+deploy-*.ps1
+setup-*.ps1
+view-*.ps1
+
+# Jupyter notebooks (ML/data analysis)
+*.ipynb
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Development utilities
+generate-swagger-spec.js
+
+# Vercel
+.vercel

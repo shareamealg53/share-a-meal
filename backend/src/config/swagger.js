@@ -7,7 +7,7 @@ const options = {
 			title: "Share-a-Meal API",
 			version: "2.0.0",
 			description:
-				"Trust-first coordination engine for verified food sharing between SMEs, NGOs, sponsors, and admins.",
+				"Trust-first coordination engine for verified food sharing between SMEs, NGOs, and sponsors.",
 			contact: {
 				name: "Share-a-Meal Team",
 			},
@@ -40,7 +40,7 @@ const options = {
 						email: { type: "string", format: "email" },
 						role: {
 							type: "string",
-							enum: ["sme", "ngo", "sponsor", "admin"],
+							enum: ["sme", "ngo", "sponsor"],
 						},
 						organization_name: { type: "string" },
 						address: { type: "string" },
@@ -142,7 +142,6 @@ const options = {
 		},
 		tags: [
 			{ name: "Auth", description: "Authentication endpoints" },
-			{ name: "Admin", description: "Admin verification and management" },
 			{ name: "Meals", description: "Meal creation and listing" },
 			{ name: "Claims", description: "NGO claim lifecycle" },
 			{ name: "AI", description: "AI expiry and food status endpoints" },

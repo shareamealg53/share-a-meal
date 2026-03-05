@@ -171,6 +171,32 @@ input::placeholder {
   pointer-events: none;
 }
 
+.statusCard {
+  margin-top: 20px;
+  width: 100%;
+  max-width: 400px;
+  background: var(--White);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--Gray);
+}
+
+.statusCard p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.statusSuccess {
+  border-left: 4px solid var(--Green);
+  background: var(--Surface);
+}
+
+.statusError {
+  border-left: 4px solid var(--Error);
+}
+
 @media (min-width: 768px) {
   .signup {
     flex-direction: row;

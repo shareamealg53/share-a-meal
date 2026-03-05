@@ -1,6 +1,6 @@
 # ShareAMeal v2.0.0 - Full Stack App
 
-Trust-first coordination engine for verified food sharing between SMEs, NGOs, sponsors, and admins.
+Trust-first coordination engine for verified food sharing between SMEs, NGOs, and sponsors.
 
 ## 📁 Project Structure (Monorepo)
 
@@ -58,7 +58,7 @@ DB_USER=root
 DB_PASSWORD=YOUR PASSWORD
 DB_NAME=sharemeal
 JWT_SECRET=<your-secret>
-ADMIN_SECRET=<your-secret>
+
 SERVICE_TOKEN=<your-token>
 ```
 

@@ -1,10 +1,3 @@
-:root {
-  --primary: #2ecc71;
-  --secondary: #3498db;
-  --accent: #e74c3c;
-  --warm: #f39c12;
-}
-
 .container {
   padding: 40px 20px;
   max-width: 1200px;
@@ -15,7 +8,7 @@
   text-align: center;
   font-size: 2.5rem;
   margin-bottom: 40px;
-  color: #2c3e50;
+  color: var(--Black);
 }
 
 .statsGrid {
@@ -27,28 +20,27 @@
 
 .statCard {
   padding: 25px;
-  border: 2px solid #ecf0f1;
+  border: 1px solid var(--Border);
   border-radius: 12px;
   text-align: center;
   transition: all 0.3s ease;
-  background: white;
+  background: var(--White);
 }
 
 .statCard:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.1);
+  border-color: var(--Green);
 }
 
 .statCard h3 {
   margin: 0 0 15px 0;
-  color: #7f8c8d;
+  color: var(--Muted);
   font-size: 0.9rem;
 }
 
 .statCard h2 {
   margin: 0;
   font-size: 2.5rem;
-  color: var(--primary);
+  color: var(--Green);
 }
 
 .breakdown {
@@ -57,7 +49,7 @@
 
 .breakdown h2 {
   margin-bottom: 20px;
-  color: #2c3e50;
+  color: var(--Black);
 }
 
 .statusGrid {
@@ -68,40 +60,41 @@
 
 .statusItem {
   padding: 15px;
-  background: #f8f9fa;
+  background: var(--Gray);
   border-radius: 8px;
   text-align: center;
-  border-left: 4px solid var(--primary);
+  border-left: 4px solid var(--Green);
 }
 
 .statusItem p {
   margin: 0 0 10px 0;
   font-size: 0.85rem;
-  color: #7f8c8d;
+  color: var(--Muted);
   text-transform: uppercase;
 }
 
 .statusItem h3 {
   margin: 0;
   font-size: 1.8rem;
-  color: #2c3e50;
+  color: var(--Black);
 }
 
 .storiesSection {
   margin-top: 40px;
   padding: 30px;
-  background: linear-gradient(135deg, #f0f8ff 0%, #e6f7ff 100%);
+  background: var(--Gray);
+  border: 1px solid var(--Border);
   border-radius: 12px;
   text-align: center;
 }
 
 .storiesSection h2 {
-  color: #2c3e50;
+  color: var(--Black);
   margin: 0 0 15px 0;
 }
 
 .storiesSection p {
-  color: #34495e;
+  color: var(--Muted);
   font-size: 1.1rem;
   margin: 0;
 }

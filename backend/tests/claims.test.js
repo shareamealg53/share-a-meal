@@ -12,14 +12,14 @@ const pool = require("../src/config/db");
 describe("Claim Endpoints", () => {
 	let smeToken;
 	let ngoToken;
-	let adminToken;
+	let sponsorToken;
 	let testMealId;
 
 	beforeAll(async () => {
 		// Generate tokens directly without needing actual registration/authorization
 		const smeUserId = 1;
 		const ngoUserId = 2;
-		const adminUserId = 3;
+		const sponsorUserId = 3;
 
 		smeToken = jwt.sign(
 			{ id: smeUserId, email: "sme@test.com", role: "sme" },
@@ -33,53 +33,58 @@ describe("Claim Endpoints", () => {
 			{ expiresIn: process.env.JWT_EXPIRES_IN }
 		);
 
-		adminToken = jwt.sign(
-			{ id: adminUserId, email: "admin@test.com", role: "admin" },
+		sponsorToken = jwt.sign(
+			{ id: sponsorUserId, email: "sponsor@test.com", role: "sponsor" },
 			process.env.JWT_SECRET,
 			{ expiresIn: process.env.JWT_EXPIRES_IN }
 		);
 
-		// Setup mock implementation for database queries
+		// Setup mock implementation for database queries with state management
 		pool.query.mockImplementation(async (query, params) => {
+			const store = global.mockDataStore;
+			
 			// Handle user authentication queries
 			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
 				const userId = params[0];
-				if (userId === smeUserId) {
-					return [[{ id: smeUserId, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
-				} else if (userId === ngoUserId) {
-					return [[{ id: ngoUserId, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
-				} else if (userId === adminUserId) {
-					return [[{ id: adminUserId, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
-				}
+				const user = store.users.get(userId);
+				if (!user) return [[], undefined];
+				return [[{ id: user.id, email: user.email, role: user.role, is_verified: user.is_verified }], undefined];
 			}
+
 			// Handle meal queries
-			else if (query.includes("SELECT") && query.includes("FROM meals")) {
-				if (params[0] === 99999) {
-					return [[], undefined];
-				}
-				// Return meal data
-				return [[{
-					id: params[0] || 100,
-					title: "Test Meal for Claims",
-					quantity: 10,
-					unit: "servings",
-					food_status: "AVAILABLE",
-					created_by: smeUserId,
-				}], undefined];
+			if (query.includes("SELECT") && query.includes("FROM meals")) {
+				const mealId = params[0];
+				if (!mealId || mealId === 99999) return [[], undefined];
+				const meal = store.meals.get(mealId);
+				if (!meal) return [[], undefined];
+				return [[meal], undefined];
 			}
+
+			// Check if meal already claimed
+			if (query.includes("SELECT") && query.includes("FROM claims") && query.includes("WHERE meal_id")) {
+				const mealId = params[0];
+				const existingClaim = Array.from(store.claims.values()).find(c => c.meal_id === mealId);
+				return [existingClaim ? [existingClaim] : [], undefined];
+			}
+
 			// Handle claim INSERT
-			else if (query.includes("INSERT INTO claims")) {
-				return [{ insertId: Math.floor(Math.random() * 10000) + 1, affectedRows: 1 }, undefined];
-			}
-			// Handle claim SELECT queries
-			else if (query.includes("SELECT") && query.includes("claims")) {
-				return [[{
-					id: 1,
-					meal_id: 100,
-					ngo_id: ngoUserId,
+			if (query.includes("INSERT INTO claims")) {
+				const claimId = Math.floor(Math.random() * 10000) + 1;
+				const newClaim = {
+					id: claimId,
+					meal_id: params[0] || 100,
+					ngo_id: params[1] || 2,
 					status: "CLAIMED",
-				}], undefined];
+				};
+				store.claims.set(claimId, newClaim);
+				return [{ insertId: claimId, affectedRows: 1 }, undefined];
 			}
+
+			// Handle generic claim SELECT queries
+			if (query.includes("SELECT") && query.includes("claims")) {
+				return [Array.from(store.claims.values()), undefined];
+			}
+
 			// Default response
 			return [[], undefined];
 		});
@@ -92,45 +97,67 @@ describe("Claim Endpoints", () => {
 		// Reset mock calls between tests but maintain mock function
 		pool.query.mockClear();
 		
-		// Re-apply default implementation
+		// Reset mock data
+		global.mockDataStore = {
+			users: new Map([
+				[1, { id: 1, email: "sme@test.com", role: "sme", is_verified: 1 }],
+				[2, { id: 2, email: "ngo@test.com", role: "ngo", is_verified: 1 }],
+				[3, { id: 3, email: "sponsor@test.com", role: "sponsor", is_verified: 1 }],
+			]),
+			meals: new Map([
+				[100, { id: 100, title: "Test Meal for Claims", quantity: 10, food_status: "AVAILABLE", created_by: 1 }],
+				[101, { id: 101, title: "Another Meal", quantity: 5, food_status: "AVAILABLE", created_by: 1 }],
+			]),
+			claims: new Map(),
+			sponsorships: new Map(),
+		};
+
+		// Re-apply implementation
 		pool.query.mockImplementation(async (query, params) => {
-			// Handle user authentication queries
-			if (query.includes("SELECT id, email, role, is_verified FROM users")) {
+			const store = global.mockDataStore;
+			
+			// Auth query: SELECT id, email, role, is_verified FROM users WHERE id = ?
+			if (query.includes("SELECT id, email, role, is_verified FROM users") && query.includes("WHERE id")) {
 				const userId = params[0];
-				if (userId === 1) {
-					return [[{ id: 1, email: "sme@test.com", role: "sme", is_verified: 1 }], undefined];
-				} else if (userId === 2) {
-					return [[{ id: 2, email: "ngo@test.com", role: "ngo", is_verified: 1 }], undefined];
-				} else if (userId === 3) {
-					return [[{ id: 3, email: "admin@test.com", role: "admin", is_verified: 1 }], undefined];
-				}
+				const user = store.users.get(userId);
+				if (!user) return [[], undefined];
+				return [[{ id: user.id, email: user.email, role: user.role, is_verified: user.is_verified }], undefined];
 			}
-			// Handle meal queries
-			else if (query.includes("SELECT") && query.includes("FROM meals")) {
-				if (params[0] === 99999) {
-					return [[], undefined];
-				}
-				return [[{
-					id: params[0] || 100,
-					title: "Test Meal for Claims",
-					quantity: 10,
-					food_status: "AVAILABLE",
-					created_by: 1,
-				}], undefined];
+
+			// Handle meal queries - return empty if meal doesn't exist
+			if (query.includes("SELECT") && query.includes("FROM meals") && query.includes("WHERE")) {
+				const mealId = params[0];
+				if (!mealId || mealId === 99999) return [[], undefined];
+				const meal = store.meals.get(parseInt(mealId));
+				if (!meal) return [[], undefined];
+				return [[meal], undefined];
 			}
+
+			// Check if meal already claimed
+			if (query.includes("SELECT") && query.includes("FROM claims") && query.includes("WHERE meal_id")) {
+				const mealId = parseInt(params[0]);
+				const existingClaim = Array.from(store.claims.values()).find(c => c.meal_id === mealId);
+				return [existingClaim ? [existingClaim] : [], undefined];
+			}
+
 			// Handle claim INSERT
-			else if (query.includes("INSERT INTO claims")) {
-				return [{ insertId: Math.floor(Math.random() * 10000) + 1, affectedRows: 1 }, undefined];
-			}
-			// Handle claim SELECT queries
-			else if (query.includes("SELECT") && query.includes("claims")) {
-				return [[{
-					id: 1,
-					meal_id: 100,
-					ngo_id: 2,
+			if (query.includes("INSERT INTO claims")) {
+				const claimId = Math.floor(Math.random() * 10000) + 1;
+				const newClaim = {
+					id: claimId,
+					meal_id: params[0] || 100,
+					ngo_id: params[1] || 2,
 					status: "CLAIMED",
-				}], undefined];
+				};
+				store.claims.set(claimId, newClaim);
+				return [{ insertId: claimId, affectedRows: 1 }, undefined];
 			}
+
+			// Handle generic claim SELECT queries
+			if (query.includes("SELECT") && query.includes("claims")) {
+				return [Array.from(store.claims.values()), undefined];
+			}
+
 			return [[], undefined];
 		});
 	});

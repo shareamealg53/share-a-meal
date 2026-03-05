@@ -20,6 +20,9 @@ function Login() {
 	const [token, setToken] = useState(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const [isUnverified, setIsUnverified] = useState(false);
+	const [userEmail, setUserEmail] = useState("");
+	const [resendLoading, setResendLoading] = useState(false);
 
 	const togglePassword = () => {
 		setShowPassword((prev) => !prev);
@@ -27,24 +30,34 @@ function Login() {
 
 	const navigate = useNavigate();
 
+	const getRoleRoute = (role) => {
+		switch ((role || "").toLowerCase()) {
+			case "sme":
+				return "/sme";
+			case "ngo":
+				return "/ngo";
+			case "sponsor":
+				return "/sponsor";
+
+			default:
+				return "/dashboard";
+		}
+	};
+
 	useEffect(() => {
 		const savedToken = localStorage.getItem("token");
 		const savedRole = localStorage.getItem("role");
 
 		if (savedToken && savedRole) {
-			if (savedRole === "SMEs") {
-				navigate("/sme");
-			} else if (savedRole === "NGOs") {
-				navigate("/ngo");
-			} else if (savedRole === "Sponsors") {
-				navigate("/sponsor");
-			}
+			navigate(getRoleRoute(savedRole));
 		}
 	}, [navigate]);
 
 	const onSubmit = async (data) => {
 		setLoading(true);
 		setServerMessage("");
+		setIsUnverified(false);
+		setUserEmail(data.email);
 		try {
 			const result = await import("../../api").then((m) =>
 				m.apiRequest("/auth/login", {
@@ -53,17 +66,48 @@ function Login() {
 				}),
 			);
 			localStorage.setItem("token", result.token);
+			if (result?.user?.role) {
+				localStorage.setItem("role", String(result.user.role).toLowerCase());
+			}
+			if (result?.user?.organization_name) {
+				localStorage.setItem("orgName", result.user.organization_name);
+			}
 			setToken(result.token);
 		} catch (error) {
-			setServerMessage(error?.message || "Login failed");
+			const errorMessage = error?.message || "Login failed";
+			setServerMessage(errorMessage);
+			// Check if error is due to unverified account
+			if (error?.code === "ACCOUNT_UNVERIFIED" || errorMessage.includes("pending verification")) {
+				setIsUnverified(true);
+			}
 		} finally {
 			setLoading(false);
 		}
 	};
 
+	const handleResendVerification = async () => {
+		setResendLoading(true);
+		setServerMessage("");
+		try {
+			await import("../../api").then((m) =>
+				m.apiRequest("/auth/resend-verification", {
+					method: "POST",
+					body: JSON.stringify({ email: userEmail }),
+				}),
+			);
+			setServerMessage("Verification email sent! Please check your inbox.");
+			setIsUnverified(false);
+		} catch (error) {
+			setServerMessage(error?.message || "Failed to resend verification email");
+		} finally {
+			setResendLoading(false);
+		}
+	};
+
 	useEffect(() => {
 		if (token) {
-			navigate("/dashboard");
+			const savedRole = localStorage.getItem("role");
+			navigate(getRoleRoute(savedRole));
 		}
 	}, [token, navigate]);
 
@@ -136,7 +180,16 @@ function Login() {
 				</div>
 			</form>
 
-			{serverMessage && <p>{serverMessage}</p>}
+			{serverMessage && <p className={isUnverified ? styles.error : ""}>{serverMessage}</p>}
+			{isUnverified && (
+				<button 
+					onClick={handleResendVerification} 
+					disabled={resendLoading}
+					className={styles.resendButton}
+				>
+					{resendLoading ? "Sending..." : "Resend Verification Email"}
+				</button>
+			)}
 		</div>
 	);
 }
