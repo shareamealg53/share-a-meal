@@ -214,7 +214,7 @@ jobs:
         run: |
           echo "🚀 Triggering Render deployment..."
           RESPONSE=$(curl -X POST \
-            --url "https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_DEPLOY_KEY }}" \
+            --url "https://api.render.com/deploy/${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_DEPLOY_KEY }}" \
             --header 'accept: application/json' \
             -w "\n%{http_code}" \
             -s)
@@ -260,7 +260,7 @@ jobs:
           done
           
           echo "⚠️ Health check timeout (deployment may still be in progress)"
-          echo "Monitor: https://dashboard.render.com/services/srv-${{ secrets.RENDER_SERVICE_ID }}"
+          echo "Monitor: https://dashboard.render.com/services/${{ secrets.RENDER_SERVICE_ID }}"
 
   # Final Status Report
   deployment-status:
