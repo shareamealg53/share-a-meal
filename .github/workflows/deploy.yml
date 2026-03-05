@@ -156,7 +156,7 @@ jobs:
         run: cd backend && npm ci --omit=dev
 
       - name: Verify backend can start
-        run: cd backend && timeout 5 npm start || true
+        run: cd backend && timeout 5 node src/app.js
         env:
           NODE_ENV: production
           PORT: 3000
@@ -261,6 +261,7 @@ jobs:
           
           echo "⚠️ Health check timeout (deployment may still be in progress)"
           echo "Monitor: https://dashboard.render.com/services/${{ secrets.RENDER_SERVICE_ID }}"
+          exit 1
 
   # Final Status Report
   deployment-status:

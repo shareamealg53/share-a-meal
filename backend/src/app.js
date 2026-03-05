@@ -94,7 +94,13 @@ app.get("/test-db", async (req, res) => {
 /**
  * Optional DB health endpoint (Not every request)
  */
-app.get("/health", dbHealth);
+app.get("/health", dbHealth, (req, res) => {
+	res.status(200).json({
+		status: "ok",
+		service: "shareameal-api",
+		timestamp: new Date().toISOString(),
+	});
+});
 
 /**
  * Application Routes
