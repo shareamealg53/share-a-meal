@@ -45,7 +45,7 @@ function Signup() {
 				organization_name: data.organization_name,
 			};
 
-			const result = await import("../../api").then((m) =>
+			await import("../../api").then((m) =>
 				m.apiRequest("/auth/register", {
 					method: "POST",
 					body: JSON.stringify(payload),

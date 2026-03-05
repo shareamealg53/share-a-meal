@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../api";
-import styles from "./Impact.module.css";
 
 export default function Impact() {
   const [metrics, setMetrics] = useState({
