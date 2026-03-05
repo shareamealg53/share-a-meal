@@ -10,10 +10,10 @@
 		"test": "jest --detectOpenHandles --forceExit",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
-		"migrate:test": "cross-env NODE_ENV=test node scripts/migrate.js"
-	},
+		"migrate:test": "cross-env NODE_ENV=test node scripts/migrate.js"	},
 	"jest": {
 		"testEnvironment": "node",
+		
 		"coveragePathIgnorePatterns": [
 			"/node_modules/"
 		],
@@ -36,8 +36,8 @@
 		"express-rate-limit": "^8.2.1",
 		"helmet": "^8.1.0",
 		"jsonwebtoken": "^9.0.3",
+		"nodemailer": "^6.9.8",
 		"mysql2": "^3.17.2",
-		"nodemailer": "^8.0.1",
 		"swagger-jsdoc": "^6.2.8",
 		"swagger-ui-express": "^5.0.1"
 	},

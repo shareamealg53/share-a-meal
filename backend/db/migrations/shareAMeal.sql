@@ -2,8 +2,7 @@
 -- Created: 2026-02-21
 -- Description: Create all core tables for Share-a-Meal platform
 
-CREATE DATABASE IF NOT EXISTS sharemeal;
-
+-- Note: Database is created by migrate.js script using DB_NAME from .env
 
 -- Users table: Core authentication and profile data
 CREATE TABLE IF NOT EXISTS users (

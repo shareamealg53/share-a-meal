@@ -50,91 +50,38 @@ describe("Sponsorship Endpoints", () => {
 			{ expiresIn: process.env.JWT_EXPIRES_IN }
 		);
 
-		// Setup mock implementation with state management
-		global.mockDataStore.sponsorships = new Map([
-			[1, { id: 1, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 100, created_at: new Date() }],
-			[2, { id: 2, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 150, created_at: new Date() }],
-			[3, { id: 3, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 250, created_at: new Date() }],
-		]);
-
-		pool.query.mockImplementation(async (query, params) => {
-			const store = global.mockDataStore;
-			
-			// Auth query: SELECT id, email, role, is_verified FROM users WHERE id = ?
-			if (query.includes("SELECT id, email, role, is_verified FROM users") && query.includes("WHERE id")) {
-				const user = store.users.get(params[0]);
-				if (!user) return [[], undefined];
-				return [[{ id: user.id, email: user.email, role: user.role, is_verified: user.is_verified }], undefined];
-			}
-
-			// Handle meal queries
-			if (query.includes("SELECT") && query.includes("FROM meals") && query.includes("WHERE")) {
-				const mealId = parseInt(params[0]);
-				if (mealId === 99999 || !mealId) return [[], undefined];
-				const meal = store.meals.get(mealId);
-				if (!meal) return [[], undefined];
-				return [[meal], undefined];
-			}
-
-			// Handle sponsorship INSERT
-			if (query.includes("INSERT INTO sponsorships")) {
-				const sponsorshipId = Math.floor(Math.random() * 10000) + 100;
-				const sponsorship = {
-					id: sponsorshipId,
-					sponsor_id: params[0],
-					meal_id: params[1],
-					ngo_id: params[2] || null,
-					amount: params[3],
-					created_at: new Date(),
-				};
-				store.sponsorships.set(sponsorshipId, sponsorship);
-				return [{ insertId: sponsorshipId, affectedRows: 1 }, undefined];
-			}
-
-			// Get sponsorships by meal with aggregate
-			if (query.includes("SELECT") && query.includes("sponsorships") && query.includes("meal_id")) {
-				const mealId = parseInt(params[0]);
-				const sponsorshipsForMeal = Array.from(store.sponsorships.values()).filter(s => s.meal_id === mealId);
-				return [sponsorshipsForMeal, undefined];
-			}
-
-			// Get sponsorships by NGO with aggregate  
-			if (query.includes("SELECT") && query.includes("sponsorships") && query.includes("ngo_id")) {
-				const ngoId = parseInt(params[0]);
-				const sponsorshipsForNgo = Array.from(store.sponsorships.values()).filter(s => s.ngo_id === ngoId);
-				return [sponsorshipsForNgo, undefined];
-			}
-
-			// Get sponsorships by sponsor
-			if (query.includes("SELECT") && query.includes("sponsorships") && query.includes("sponsor_id")) {
-				const sponsorId = parseInt(params[0]);
-				const sponsorshipsForSponsor = Array.from(store.sponsorships.values()).filter(s => s.sponsor_id === sponsorId);
-				return [sponsorshipsForSponsor, undefined];
-			}
-
-			// Generic sponsorship query
-			if (query.includes("SELECT") && query.includes("sponsorship")) {
-				return [Array.from(store.sponsorships.values()), undefined];
-			}
-
-			return [[], undefined];
-		});
-
 		// Set deterministic test meal IDs
 		testMealId = 100;
 		testMealId2 = 101;
+	});
+
+	afterAll(() => {
+		global.mockDataStore = undefined;
 	});
 
 	beforeEach(() => {
 		// Reset mock calls between tests but maintain mock function
 		pool.query.mockClear();
 		
-		// Reset sponsorships data
-		global.mockDataStore.sponsorships = new Map([
-			[1, { id: 1, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 100, created_at: new Date() }],
-			[2, { id: 2, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 150, created_at: new Date() }],
-			[3, { id: 3, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 250, created_at: new Date() }],
-		]);
+		// Reset sponsorship test data for each test
+		global.mockDataStore = {
+			users: new Map([
+				[1, { id: 1, email: "sponsor@test.com", role: "sponsor", is_verified: 1 }],
+				[2, { id: 2, email: "admin@test.com", role: "admin", is_verified: 1 }],
+				[3, { id: 3, email: "sme@test.com", role: "sme", is_verified: 1 }],
+				[4, { id: 4, email: "ngo@test.com", role: "ngo", is_verified: 1 }],
+			]),
+			meals: new Map([
+				[100, { id: 100, title: "Test Meal 1", quantity: 10, status: "AVAILABLE", restaurant_id: 3 }],
+				[101, { id: 101, title: "Test Meal 2", quantity: 5, status: "AVAILABLE", restaurant_id: 3 }],
+			]),
+			claims: new Map(),
+			sponsorships: new Map([
+				[1, { id: 1, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 100, created_at: new Date() }],
+				[2, { id: 2, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 150, created_at: new Date() }],
+				[3, { id: 3, sponsor_id: 1, meal_id: 100, ngo_id: 4, amount: 250, created_at: new Date() }],
+			]),
+		};
 
 		// Re-apply default implementation
 		pool.query.mockImplementation(async (query, params) => {
@@ -143,7 +90,7 @@ describe("Sponsorship Endpoints", () => {
 			
 			// Auth query: SELECT id, email, role, is_verified FROM users WHERE id = ?
 			if (query.includes("SELECT id, email, role, is_verified FROM users") && query.includes("WHERE id")) {
-				const user = store.users.get(numParam);
+				const user = store.users.get(parseInt(numParam));
 				if (!user) return [[], undefined];
 				return [[{ id: user.id, email: user.email, role: user.role, is_verified: user.is_verified }], undefined];
 			}
@@ -173,7 +120,7 @@ describe("Sponsorship Endpoints", () => {
 				if (numParam === 99999 || !numParam) return [[], undefined];
 				const meal = store.meals.get(numParam);
 				if (!meal) return [[], undefined];
-				return [[{ id: meal.id, title: meal.title, status: meal.food_status }], undefined];
+				return [[{ id: meal.id, title: meal.title, status: meal.status }], undefined];
 			}
 
 			// Handle meal restaurant_id lookup
@@ -181,7 +128,7 @@ describe("Sponsorship Endpoints", () => {
 				if (numParam === 99999) return [[], undefined];
 				const meal = store.meals.get(numParam);
 				if (!meal) return [[], undefined];
-				return [[{ id: meal.id, restaurant_id: meal.created_by, created_by: meal.created_by }], undefined];
+				return [[{ id: meal.id, restaurant_id: meal.restaurant_id, created_by: meal.restaurant_id }], undefined];
 			}
 
 			// Handle meal queries with joins (alias m)
@@ -193,8 +140,8 @@ describe("Sponsorship Endpoints", () => {
 					id: meal.id,
 					title: meal.title,
 					quantity: meal.quantity,
-					food_status: meal.food_status,
-					created_by: meal.created_by,
+					status: meal.status,
+					restaurant_id: meal.restaurant_id,
 					restaurant_name: "Test SME",
 				}], undefined];
 			}
