@@ -48,6 +48,15 @@ const createTransporter = async () => {
  * @param {string} token - Verification token
  */
 const sendVerificationEmail = async (email, name, token) => {
+	console.log("📧 [EMAIL] Attempting to send verification email to:", email);
+	console.log("📧 [EMAIL] SMTP Config:", {
+		host: process.env.SMTP_HOST,
+		port: process.env.SMTP_PORT,
+		secure: process.env.SMTP_SECURE,
+		user: process.env.SMTP_USER,
+		from: process.env.SMTP_FROM,
+	});
+	
 	const transporter = await createTransporter();
 
 	const verificationUrl = `${process.env.API_URL || "http://localhost:3000"}/auth/verify/${token}`;
@@ -142,6 +151,14 @@ ${frontendUrl}
 	};
 
 	const info = await transporter.sendMail(mailOptions);
+
+	// Log email sending result
+	console.log("✅ [EMAIL] Email sent successfully:", {
+		messageId: info.messageId,
+		accepted: info.accepted,
+		rejected: info.rejected,
+		response: info.response,
+	});
 
 	// In development, log the preview URL
 	if (process.env.NODE_ENV !== "production") {
