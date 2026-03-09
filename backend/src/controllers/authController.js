@@ -19,7 +19,7 @@ const register = async (req, res, next) => {
 		const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
 		const [result] = await pool.query(
-			"INSERT INTO users (name, email, password, role, organization_name, address, phone, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			"INSERT INTO users (name, email, password, role, organization_name, address, phone, is_verified, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			[
 				name,
 				email,
@@ -28,6 +28,7 @@ const register = async (req, res, next) => {
 				organization_name,
 				address,
 				phone,
+				false,
 				verificationToken,
 				tokenExpires,
 			],
