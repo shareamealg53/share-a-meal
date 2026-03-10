@@ -23,11 +23,32 @@ const getDefaultRouteByRole = (role) => {
 	}
 };
 
+const clearAuthStorage = () => {
+	localStorage.removeItem("token");
+	localStorage.removeItem("role");
+	localStorage.removeItem("orgName");
+};
+
+const isTokenActive = (token) => {
+	if (!token) return false;
+	try {
+		const parts = token.split(".");
+		if (parts.length !== 3) return false;
+
+		const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+		if (!payload.exp) return true;
+		return payload.exp * 1000 > Date.now();
+	} catch {
+		return false;
+	}
+};
+
 function ProtectedRoute({ children, allowedRoles = [] }) {
 	const token = localStorage.getItem("token");
 	const role = (localStorage.getItem("role") || "").toLowerCase();
 
-	if (!token) {
+	if (!token || !isTokenActive(token)) {
+		clearAuthStorage();
 		return <Navigate to="/login" replace />;
 	}
 

@@ -10,6 +10,12 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_REGEX = /^[A-Za-z][A-Za-z\s'-.]{1,79}$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
 
+const clearAuthStorage = () => {
+	localStorage.removeItem("token");
+	localStorage.removeItem("role");
+	localStorage.removeItem("orgName");
+};
+
 function Signup() {
 	const {
 		register,
@@ -51,6 +57,8 @@ function Signup() {
 					body: JSON.stringify(payload),
 				}),
 			);
+			// Ensure signup never reuses a stale logged-in session.
+			clearAuthStorage();
 			setServerMessage(
 				"Registration successful! Please check your email to verify your account. The verification link expires in 24 hours."
 			);
@@ -61,6 +69,11 @@ function Signup() {
 			setLoading(false);
 		}
 	};
+
+	useEffect(() => {
+		// User entered signup flow: clear potentially stale auth state first.
+		clearAuthStorage();
+	}, []);
 
 	useEffect(() => {
 		if (isSuccess) {

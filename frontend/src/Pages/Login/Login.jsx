@@ -9,6 +9,26 @@ import Closedeye from "../../assets/Icons/eye-closed.svg?react";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const clearAuthStorage = () => {
+	localStorage.removeItem("token");
+	localStorage.removeItem("role");
+	localStorage.removeItem("orgName");
+};
+
+const isTokenActive = (token) => {
+	if (!token) return false;
+	try {
+		const parts = token.split(".");
+		if (parts.length !== 3) return false;
+
+		const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+		if (!payload.exp) return true;
+		return payload.exp * 1000 > Date.now();
+	} catch {
+		return false;
+	}
+};
+
 function Login() {
 	const {
 		register,
@@ -48,8 +68,13 @@ function Login() {
 		const savedToken = localStorage.getItem("token");
 		const savedRole = localStorage.getItem("role");
 
-		if (savedToken && savedRole) {
+		if (savedToken && savedRole && isTokenActive(savedToken)) {
 			navigate(getRoleRoute(savedRole));
+			return;
+		}
+
+		if (savedToken && !isTokenActive(savedToken)) {
+			clearAuthStorage();
 		}
 	}, [navigate]);
 
@@ -76,6 +101,7 @@ function Login() {
 		} catch (error) {
 			const errorMessage = error?.message || "Login failed";
 			setServerMessage(errorMessage);
+			clearAuthStorage();
 			// Check if error is due to unverified account
 			if (error?.code === "ACCOUNT_UNVERIFIED" || errorMessage.includes("pending verification")) {
 				setIsUnverified(true);
