@@ -95,6 +95,7 @@ async function runMigration() {
 			"SELECT COUNT(*) as total, SUM(is_verified) as verified, SUM(!is_verified) as unverified FROM users"
 		);
 		console.log("📊 User stats:", stats[0]);
+		console.log("🚩 MIGRATION_MARKER_20260310");
 		
 		console.log("✅ Database schema migration completed successfully!");
 		process.exit(0);
