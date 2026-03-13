@@ -1,0 +1,10 @@
+[33m1e73b57[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;31mdolapo/main[m[33m, [m[1;32mbackend[m[33m)[m Fail fast on SMTP timeouts for verification emails
+[33ma7d22b1[m Remove temporary debug logs from migration
+[33m8de4b5c[m Fix stale auth redirect loop in signup/login flow
+[33m8e6df63[m Backfill missing users verification columns in migration
+[33m2a4afbc[m Add migration marker log for Render deploy verification
+[33m425c07b[m Add user stats logging to migration
+[33m14eca3e[m Force new accounts to start unverified
+[33m88d427d[m Add production email logging for debugging
+[33m6ea5fd8[m fix(deploy): declare SMTP and verification URL env vars in render config
+[33m801c62e[m fix(deploy): use root endpoint for Render and CI health checks
