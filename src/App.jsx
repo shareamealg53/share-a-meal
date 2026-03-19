@@ -5,17 +5,15 @@ import HomePage from "./Pages/HomePage/HomePage";
 import Signup from "./Pages/Signup/Signup";
 import Login from "./Pages/Login/Login";
 
-
-
 import "./Theme/Global.css";
 import SmeDash from "./Components/SmeDash/SmeDash";
 import DashLayout from "./Components/DashLayout/DashLayout";
 
+
+
 function App() {
 	const user = { type: "ngo", name: "Hope Alive NGO" };
 	return (
-		
-
 		<Routes>
 			<Route path="/" element={<Layout />}>
 				<Route index element={<HomePage />} />

@@ -164,7 +164,8 @@ export default function Sponsor(){
           <p><strong>Campaigns Supported:</strong> 8</p>
         </div>
 
-      </div
+      </div>
+
         </main>
       </div>
     </div>

@@ -1,8 +1,8 @@
 .sidebar {
   width: 260px;
   height: 100vh;
-  background-color:var(--Green); /* Dark forest green */
-  color:var(--White);
+  background-color:#1B5E20; 
+  color:#FFFFFF;
   display: flex;
   flex-direction: column;
   padding: 24px 0;
