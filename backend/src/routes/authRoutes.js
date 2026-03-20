@@ -35,10 +35,10 @@ router.post(
 	login,
 );
 
-// Email verification endpoint
-router.get("/verify/:token", verifyEmail);
+// // Email verification endpoint
+// router.get("/verify/:token", verifyEmail);
 
-// Resend verification email
-router.post("/resend-verification", resendVerification); // keep before any protected routes
+// // Resend verification email
+// router.post("/resend-verification", resendVerification); // keep before any protected routes
 
 module.exports = router;

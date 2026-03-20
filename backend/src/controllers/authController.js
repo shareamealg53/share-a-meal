@@ -114,7 +114,6 @@ const login = async (req, res, next) => {
 			throw new AppError("Invalid credentials", 401, "AUTH_FAILED");
 		}
 
-<<<<<<< HEAD
 		// const isVerified = Number(user.is_verified) === 1;
 		// if (!isVerified) {
 		// 	throw new AppError(
@@ -122,16 +121,6 @@ const login = async (req, res, next) => {
 		// 		403,
 		// 		"ACCOUNT_UNVERIFIED",
 		// 	);
-=======
-		// TEMPORARILY DISABLE EMAIL VERIFICATION CHECK FOR DEMO
-		// const isVerified = Number(user.is_verified) === 1;
-		// if (!isVerified) {
-		//     throw new AppError(
-		//         "Account is pending verification.",
-		//         403,
-		//         "ACCOUNT_UNVERIFIED",
-		//     );
->>>>>>> 19e32a0e3b7ea146f3157284d3de4b4a3b682222
 		// }
 
 		const isMatch = await bcrypt.compare(password, user.password);
@@ -250,4 +239,4 @@ const login = async (req, res, next) => {
 // 	}
 // };
 
-module.exports = { register, login, verifyEmail, resendVerification };
+module.exports = { register, login };
