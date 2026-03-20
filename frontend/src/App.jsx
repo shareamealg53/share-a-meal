@@ -6,7 +6,7 @@ import Signup from "./Pages/Signup/Signup";
 import Login from "./Pages/Login/Login";
 import VerifyEmail from "./Pages/VerifyEmail/VerifyEmail";
 import "./Theme/Global.css";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 // import SmeDash from "./Components/SmeDash/SmeDash";
 import DashLayout from "./Components/DashLayout/DashLayout";
 import Sponsor from "./Pages/Sponsor/Sponsor";
@@ -25,7 +25,6 @@ const getDefaultRouteByRole = (role) => {
 };
 
 const clearAuthStorage = () => {
-	
 	localStorage.removeItem("token");
 	localStorage.removeItem("role");
 	localStorage.removeItem("orgName");
