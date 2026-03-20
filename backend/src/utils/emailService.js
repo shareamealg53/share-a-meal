@@ -9,47 +9,34 @@ const generateVerificationToken = () => {
 	return crypto.randomBytes(32).toString("hex");
 };
 
-const EMAIL_SEND_TIMEOUT_MS = Number(process.env.EMAIL_SEND_TIMEOUT_MS || 15000);
+const EMAIL_SEND_TIMEOUT_MS = Number(
+	process.env.EMAIL_SEND_TIMEOUT_MS || 15000,
+);
 
 const withTimeout = (promise, timeoutMs, context) => {
-	let timeoutId;
-	const timeoutPromise = new Promise((_, reject) => {
-		timeoutId = setTimeout(() => {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => {
 			reject(new Error(`${context} timed out after ${timeoutMs}ms`));
 		}, timeoutMs);
-	});
-
-	return Promise.race([promise, timeoutPromise]).finally(() => {
-		if (timeoutId) clearTimeout(timeoutId);
+		promise.then(
+			(result) => {
+				clearTimeout(timer);
+				resolve(result);
+			},
+			(err) => {
+				clearTimeout(timer);
+				reject(err);
+			},
+		);
 	});
 };
 
-/**
- * Create email transporter based on environment
- * In development: Uses Ethereal (fake SMTP for testing)
- * In production: Uses real SMTP credentials from environment variables
- */
 const createTransporter = async () => {
-	if (process.env.NODE_ENV === "production") {
-		// Production: Use real email service
-		return nodemailer.createTransport({
-			host: process.env.SMTP_HOST,
-			port: Number(process.env.SMTP_PORT || 587),
-			secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
-			auth: {
-				user: process.env.SMTP_USER,
-				pass: process.env.SMTP_PASS,
-			},
-			connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000),
-			greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
-			socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 15000),
-			tls: {
-				rejectUnauthorized: false,
-			},
-		});
-	} else {
-		// Development/Test: Use Ethereal for testing (creates fake account)
+	const useEthereal = process.env.USE_ETHEREAL === "true";
+
+	if (useEthereal) {
 		const testAccount = await nodemailer.createTestAccount();
+		console.log("📧 Using Ethereal test account:", testAccount.user);
 		return nodemailer.createTransport({
 			host: "smtp.ethereal.email",
 			port: 587,
@@ -60,135 +47,58 @@ const createTransporter = async () => {
 			},
 		});
 	}
+
+	// Use SendGrid (or any SMTP) in all environments
+	return nodemailer.createTransport({
+		host: process.env.SMTP_HOST,
+		port: Number(process.env.SMTP_PORT || 587),
+		secure: process.env.SMTP_SECURE === "true",
+		auth: {
+			user: process.env.SMTP_USER, // must be "apikey" for SendGrid
+			pass: process.env.SMTP_PASS,
+		},
+		connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000),
+		greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
+		socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 15000),
+	});
 };
 
-/**
- * Send verification email to user
- * @param {string} email - Recipient email address
- * @param {string} name - Recipient name
- * @param {string} token - Verification token
- */
 const sendVerificationEmail = async (email, name, token) => {
-	console.log("📧 [EMAIL] Attempting to send verification email to:", email);
-	console.log("📧 [EMAIL] SMTP Config:", {
-		host: process.env.SMTP_HOST,
-		port: process.env.SMTP_PORT,
-		secure: process.env.SMTP_SECURE,
-		user: process.env.SMTP_USER,
-		from: process.env.SMTP_FROM,
-	});
-	
+	const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+
 	const transporter = await createTransporter();
 
-	const verificationUrl = `${process.env.API_URL || "http://localhost:3000"}/auth/verify/${token}`;
-	const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
 	const mailOptions = {
-		from: `"ShareAMeal" <${process.env.SMTP_FROM || "noreply@shareameal.com"}>`,
+		from: `"Share A Meal" <${process.env.SMTP_FROM}>`,
 		to: email,
-		subject: "Verify Your ShareAMeal Account",
+		subject: "Verify your Share A Meal account",
 		html: `
-			<!DOCTYPE html>
-			<html>
-			<head>
-				<meta charset="utf-8">
-				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<title>Verify Your Account</title>
-			</head>
-			<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-				<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-					<h1 style="color: white; margin: 0; font-size: 28px;">Welcome to ShareAMeal! 🍽️</h1>
-				</div>
-				
-				<div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-					<p style="font-size: 16px; margin-bottom: 20px;">Hi <strong>${name}</strong>,</p>
-					
-					<p style="font-size: 16px; margin-bottom: 20px;">
-						Thanks for registering with ShareAMeal! We're excited to have you join our community 
-						of food sharing between SMEs, NGOs, and sponsors.
-					</p>
-					
-					<p style="font-size: 16px; margin-bottom: 30px;">
-						To complete your registration and start using your account, please verify your email 
-						address by clicking the button below:
-					</p>
-					
-					<div style="text-align: center; margin: 30px 0;">
-						<a href="${verificationUrl}" 
-						   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-						          color: white; 
-						          padding: 15px 40px; 
-						          text-decoration: none; 
-						          border-radius: 5px; 
-						          font-size: 16px; 
-						          font-weight: bold;
-						          display: inline-block;">
-							Verify My Email
-						</a>
-					</div>
-					
-					<p style="font-size: 14px; color: #666; margin-top: 30px;">
-						Or copy and paste this link into your browser:<br>
-						<a href="${verificationUrl}" style="color: #667eea; word-break: break-all;">${verificationUrl}</a>
-					</p>
-					
-					<p style="font-size: 14px; color: #666; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-						⏰ <strong>Note:</strong> This verification link expires in 24 hours.
-					</p>
-					
-					<p style="font-size: 14px; color: #666; margin-top: 10px;">
-						If you didn't create an account with ShareAMeal, please ignore this email.
-					</p>
-				</div>
-				
-				<div style="text-align: center; margin-top: 20px; padding: 20px; font-size: 12px; color: #999;">
-					<p>ShareAMeal - Trust-first coordination for food sharing</p>
-					<p>
-						<a href="${frontendUrl}" style="color: #667eea; text-decoration: none;">Visit Website</a> | 
-						<a href="${frontendUrl}/support" style="color: #667eea; text-decoration: none;">Support</a>
-					</p>
-				</div>
-			</body>
-			</html>
-		`,
-		text: `
-Hi ${name},
-
-Welcome to ShareAMeal!
-
-Thanks for registering. To complete your registration and verify your email address, 
-please click the link below:
-
-${verificationUrl}
-
-This link expires in 24 hours.
-
-If you didn't create an account with ShareAMeal, please ignore this email.
-
----
-ShareAMeal - Trust-first coordination for food sharing
-${frontendUrl}
-		`,
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #e67e22;">Welcome to Share A Meal, ${name}!</h2>
+                <p>Thank you for registering. Please verify your email address by clicking the button below:</p>
+                <a href="${verificationUrl}"
+                    style="display: inline-block; padding: 12px 24px; background-color: #e67e22; color: white; text-decoration: none; border-radius: 4px; margin: 16px 0;">
+                    Verify Email
+                </a>
+                <p>Or copy and paste this link into your browser:</p>
+                <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
+                <p style="color: #999; font-size: 14px;">This link expires in 24 hours. If you did not create this account, you can safely ignore this email.</p>
+            </div>
+        `,
+		text: `Welcome to Share A Meal, ${name}!\n\nVerify your email: ${verificationUrl}\n\nThis link expires in 24 hours.`,
 	};
 
+	const sendPromise = transporter.sendMail(mailOptions);
 	const info = await withTimeout(
-		transporter.sendMail(mailOptions),
+		sendPromise,
 		EMAIL_SEND_TIMEOUT_MS,
-		"SMTP sendMail",
+		"sendVerificationEmail",
 	);
 
-	// Log email sending result
-	console.log("✅ [EMAIL] Email sent successfully:", {
-		messageId: info.messageId,
-		accepted: info.accepted,
-		rejected: info.rejected,
-		response: info.response,
-	});
-
-	// In development, log the preview URL
-	if (process.env.NODE_ENV !== "production") {
-		console.log("📧 Email sent:", info.messageId);
-		console.log("🔗 Preview URL:", nodemailer.getTestMessageUrl(info));
+	if (process.env.USE_ETHEREAL === "true") {
+		console.log("📧 Preview URL:", nodemailer.getTestMessageUrl(info));
+	} else {
+		console.log(`✅ Verification email sent to ${email}`);
 	}
 
 	return info;

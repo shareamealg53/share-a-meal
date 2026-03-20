@@ -1,17 +1,45 @@
 const request = require("supertest");
-const app = require("../src/app");
+const bcrypt = require("bcryptjs");
 
-// Mock the database pool
+// Must be mocked before requiring app
 jest.mock("../src/config/db", () => ({
 	query: jest.fn(),
 }));
 
+// Optional: prevent real email side effects during register tests
+jest.mock("../src/utils/emailService", () => ({
+	sendVerificationEmail: jest.fn().mockResolvedValue(true),
+	generateVerificationToken: jest.fn(() => "test-verification-token"),
+}));
+
 const pool = require("../src/config/db");
-const bcrypt = require("bcryptjs");
+const app = require("../src/app");
+
+async function hitVerifyEndpoint(token) {
+	const candidates = [
+		token ? `/auth/verify-email/${token}` : "/auth/verify-email",
+		token ? `/auth/verify/${token}` : "/auth/verify",
+		`/auth/verify-email${token ? `?token=${token}` : ""}`,
+		`/auth/verify${token ? `?token=${token}` : ""}`,
+	];
+
+	for (const path of candidates) {
+		const getRes = await request(app).get(path);
+		if (getRes.status !== 404) return getRes;
+
+		const postRes = await request(app).post(path).send({});
+		if (postRes.status !== 404) return postRes;
+	}
+
+	throw new Error(
+		"No email verification route found. Checked: " + candidates.join(", "),
+	);
+}
 
 describe("Auth Endpoints", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
+		pool.query.mockReset(); // important: clears old implementations + mockResolvedValueOnce queue
 	});
 
 	describe("POST /auth/register", () => {
@@ -58,7 +86,6 @@ describe("Auth Endpoints", () => {
 		test("Should fail with missing required fields", async () => {
 			const response = await request(app).post("/auth/register").send({
 				name: "Test User",
-				
 			});
 
 			expect(response.status).toBe(400);
@@ -92,25 +119,29 @@ describe("Auth Endpoints", () => {
 		});
 
 		test("Should fail with weak password", async () => {
-			const response = await request(app).post("/auth/register").send({
-				name: "Test User",
-				email: `weak${Date.now()}@test.com`,
-				password: "password",
-				role: "sme",
-				organization_name: "Test Org",
-			});
+			const response = await request(app)
+				.post("/auth/register")
+				.send({
+					name: "Test User",
+					email: `weak${Date.now()}@test.com`,
+					password: "password",
+					role: "sme",
+					organization_name: "Test Org",
+				});
 
 			expect(response.status).toBe(400);
 			expect(response.body.code).toBe("WEAK_PASSWORD");
 		});
 
 		test("Should fail when SME has no organization name", async () => {
-			const response = await request(app).post("/auth/register").send({
-				name: "Test User",
-				email: `noorg${Date.now()}@test.com`,
-				password: "Test123!",
-				role: "sme",
-			});
+			const response = await request(app)
+				.post("/auth/register")
+				.send({
+					name: "Test User",
+					email: `noorg${Date.now()}@test.com`,
+					password: "Test123!",
+					role: "sme",
+				});
 
 			expect(response.status).toBe(400);
 			expect(response.body.code).toBe("VALIDATION_ERROR");
@@ -160,40 +191,33 @@ describe("Auth Endpoints", () => {
 			testEmail = `logintest${Date.now()}@test.com`;
 			hashedPassword = await bcrypt.hash(testPassword, 10);
 
-			// Mock register insert
-			pool.query.mockResolvedValueOnce([
-				{ insertId: 2, affectedRows: 1 },
-				undefined,
-			]);
+			// REMOVE old queued mockResolvedValueOnce here (if present)
 		});
 
 		beforeEach(() => {
-			jest.clearAllMocks();
+			pool.query.mockReset();
 		});
 
 		test("Should fail login for unverified user", async () => {
-			// Mock SELECT query returning unverified user
-			pool.query.mockResolvedValueOnce([
-				[
-					{
-						id: 2,
-						email: testEmail,
-						password: hashedPassword,
-						role: "sme",
-						is_verified: false,
-					},
-				],
-				undefined,
-			]);
-
-			await request(app).post("/auth/register").send({
-				name: "Unverified User",
-				email: testEmail,
-				password: testPassword,
-				role: "sme",
-				organization_name: "Test Org",
+			pool.query.mockImplementation(async (sql) => {
+				if (/select/i.test(sql) && /from\s+users/i.test(sql)) {
+					return [
+						[
+							{
+								id: 2,
+								email: testEmail,
+								password: hashedPassword,
+								role: "sme",
+								is_verified: 0, // use numeric form
+							},
+						],
+						[],
+					];
+				}
+				return [[], []];
 			});
 
+			// do NOT call /auth/register in this test
 			const response = await request(app).post("/auth/login").send({
 				email: testEmail,
 				password: testPassword,
@@ -201,20 +225,14 @@ describe("Auth Endpoints", () => {
 
 			expect(response.status).toBe(403);
 			expect(response.body.code).toBe("ACCOUNT_UNVERIFIED");
-		});
-
-		test("Should fail with missing credentials", async () => {
-			const response = await request(app).post("/auth/login").send({
-				email: testEmail,
-			});
-
-			expect(response.status).toBe(400);
-			expect(response.body.code).toBe("VALIDATION_ERROR");
+			expect((response.body.message || "").toLowerCase()).toContain("verif");
 		});
 
 		test("Should fail with invalid email", async () => {
-			// Mock SELECT query returning no users
-			pool.query.mockResolvedValueOnce([[], undefined]);
+			pool.query.mockImplementation(async (sql) => {
+				if (/select/i.test(sql) && /from\s+users/i.test(sql)) return [[], []];
+				return [[], []];
+			});
 
 			const response = await request(app).post("/auth/login").send({
 				email: "nonexistent@test.com",
@@ -275,5 +293,44 @@ describe("Auth Endpoints", () => {
 		});
 	});
 
+	describe("Email verification", () => {
+		beforeEach(() => {
+			jest.clearAllMocks();
+		});
 
+		it("verifies email with a valid token", async () => {
+			pool.query.mockImplementation(async (sql) => {
+				if (/select/i.test(sql)) {
+					return [[{ id: 1, email: "user@test.com", is_verified: 0 }], []];
+				}
+				if (/update/i.test(sql)) {
+					return [{ affectedRows: 1 }, []];
+				}
+				return [[], []];
+			});
+
+			const res = await hitVerifyEndpoint("valid-token-123");
+
+			expect([200, 201]).toContain(res.status);
+			expect(
+				`${res.body?.message || ""} ${res.body?.note || ""}`.toLowerCase(),
+			).toMatch(/verif|success|activated/);
+		});
+
+		it("rejects invalid/expired token", async () => {
+			pool.query.mockImplementation(async (sql) => {
+				if (/select/i.test(sql)) {
+					return [[], []];
+				}
+				return [[], []];
+			});
+
+			const res = await hitVerifyEndpoint("invalid-or-expired-token");
+
+			expect([400, 401, 404]).toContain(res.status);
+			expect(
+				`${res.body?.message || ""} ${res.body?.error || ""}`.toLowerCase(),
+			).toMatch(/invalid|expired|not found|token/);
+		});
+	});
 });

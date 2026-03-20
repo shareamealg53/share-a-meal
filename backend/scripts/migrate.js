@@ -104,9 +104,20 @@ async function runMigration() {
 			try {
 				await connection.query(statement);
 			} catch (error) {
-				if (!error.message.includes("already exists")) {
-					throw error;
+				// Allow idempotent re-runs for tables/indexes that already exist
+				if (
+					error.code === "ER_TABLE_EXISTS_ERROR" ||
+					error.code === "ER_DUP_KEYNAME" ||
+					(error.message && error.message.includes("already exists"))
+				) {
+					console.warn(
+						"Skipping migration statement because object already exists:",
+						statement,
+					);
+					continue;
 				}
+
+				throw error;
 			}
 		}
 
@@ -118,7 +129,7 @@ async function runMigration() {
 			"📋 Tables in current database:",
 			tables.map((row) => Object.values(row)[0]),
 		);
-		
+
 		console.log("✅ Database schema migration completed successfully!");
 		process.exit(0);
 	} catch (error) {

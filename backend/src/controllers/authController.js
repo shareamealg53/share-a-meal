@@ -1,46 +1,72 @@
 const bcrypt = require("bcryptjs");
-
 const jwt = require("jsonwebtoken");
-
+const crypto = require("crypto");
 const pool = require("../config/db");
-
 const { AppError } = require("../middleware/errorHandler");
-const { generateVerificationToken, sendVerificationEmail } = require("../utils/emailService");
+const {
+	generateVerificationToken,
+	sendVerificationEmail,
+} = require("../utils/emailService");
+
+const normalizeRole = (value = "") => value.toString().trim().toLowerCase();
+const ALLOWED_ROLES = new Set(["sme", "ngo", "sponsor"]);
 
 const register = async (req, res, next) => {
 	try {
 		const { name, email, password, role, organization_name, address, phone } =
 			req.body;
 
+		if (!name || !email || !password || !role) {
+			throw new AppError(
+				"Name, email, password, and role are required",
+				400,
+				"VALIDATION_ERROR",
+			);
+		}
+
+		if (password.length < 6) {
+			throw new AppError(
+				"Password must be at least 6 characters",
+				400,
+				"WEAK_PASSWORD",
+			);
+		}
+
+		const normalizedRole = normalizeRole(role);
+		if (!ALLOWED_ROLES.has(normalizedRole)) {
+			throw new AppError("Invalid role", 400, "INVALID_ROLE");
+		}
+
+		const normalizedEmail = email.toString().trim().toLowerCase();
+
+		const [existingUsers] = await pool.query(
+			"SELECT id FROM users WHERE email = ?",
+			[normalizedEmail],
+		);
+
+		if (existingUsers.length > 0) {
+			throw new AppError("Email is already registered", 409, "EMAIL_EXISTS");
+		}
+
 		const hashedPassword = await bcrypt.hash(password, 10);
-		
-		// Generate verification token
-		const verificationToken = generateVerificationToken();
-		const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+		const verificationToken = crypto.randomBytes(32).toString("hex");
+		const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
 		const [result] = await pool.query(
-			"INSERT INTO users (name, email, password, role, organization_name, address, phone, is_verified, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			"INSERT INTO users (name, email, password, role, organization_name, is_verified, verification_token, verification_token_expires) VALUES (?, ?, ?, ?, ?, 0, ?, ?)",
 			[
 				name,
-				email,
+				normalizedEmail,
 				hashedPassword,
-				role,
-				organization_name,
-				address,
-				phone,
-				false,
+				normalizedRole, // FIX: save normalized role
+				organization_name || null,
 				verificationToken,
-				tokenExpires,
+				verificationTokenExpiry,
 			],
 		);
 
-		// Send verification email (don't block response if it fails)
-		try {
-			await sendVerificationEmail(email, name, verificationToken);
-		} catch (emailError) {
-			console.error("Failed to send verification email:", emailError);
-			// Continue anyway - user can request a new verification email
-		}
+		// FIX: fail loudly if email cannot be sent
+		await sendVerificationEmail(normalizedEmail, name, verificationToken);
 
 		res.status(201).json({
 			message: "User registered successfully",
@@ -56,23 +82,40 @@ const login = async (req, res, next) => {
 	try {
 		const { email, password } = req.body;
 
-		const [users] = await pool.query("SELECT * FROM users WHERE email = ?", [
-			email,
-		]);
+		if (!email || !password) {
+			throw new AppError(
+				"Email and password required",
+				400,
+				"VALIDATION_ERROR",
+			);
+		}
 
-		if (users.length === 0) {
+		const normalizedEmail = email.toString().trim().toLowerCase();
+
+		const queryResult = await pool.query(
+			"SELECT * FROM users WHERE email = ?",
+			[normalizedEmail],
+		);
+
+		let users;
+		if (Array.isArray(queryResult)) {
+			users = Array.isArray(queryResult[0]) ? queryResult[0] : queryResult;
+		} else {
+			users = queryResult ? [queryResult] : [];
+		}
+
+		if (!users || users.length === 0) {
 			throw new AppError("Invalid credentials", 401, "AUTH_FAILED");
 		}
 
 		const user = users[0];
 
-		const isMatch = await bcrypt.compare(password, user.password);
-
-		if (!isMatch) {
+		if (!user || !user.password) {
 			throw new AppError("Invalid credentials", 401, "AUTH_FAILED");
 		}
 
-		if (!user.is_verified) {
+		const isVerified = Number(user.is_verified) === 1;
+		if (!isVerified) {
 			throw new AppError(
 				"Account is pending verification.",
 				403,
@@ -80,8 +123,15 @@ const login = async (req, res, next) => {
 			);
 		}
 
+		const isMatch = await bcrypt.compare(password, user.password);
+		if (!isMatch) {
+			throw new AppError("Invalid credentials", 401, "AUTH_FAILED");
+		}
+
+		const normalizedUserRole = normalizeRole(user.role);
+
 		const token = jwt.sign(
-			{ id: user.id, email: user.email, role: user.role },
+			{ id: user.id, email: user.email, role: normalizedUserRole },
 			process.env.JWT_SECRET,
 			{ expiresIn: process.env.JWT_EXPIRES_IN },
 		);
@@ -93,7 +143,7 @@ const login = async (req, res, next) => {
 				id: user.id,
 				name: user.name,
 				email: user.email,
-				role: user.role,
+				role: normalizedUserRole,
 				is_verified: user.is_verified,
 			},
 		});
@@ -106,43 +156,33 @@ const verifyEmail = async (req, res, next) => {
 	try {
 		const { token } = req.params;
 
-		// Find user with valid token
-		const [users] = await pool.query(
-			"SELECT id, email, name, is_verified, verification_token_expires FROM users WHERE verification_token = ?",
-			[token]
+		const [rows] = await pool.query(
+			`SELECT id, email
+             FROM users
+             WHERE verification_token = ?
+               AND verification_token_expires > NOW()
+               AND is_verified = 0
+             LIMIT 1`,
+			[token],
 		);
 
-		if (users.length === 0) {
+		if (rows.length === 0) {
 			throw new AppError(
 				"Invalid or expired verification token",
 				400,
-				"INVALID_TOKEN"
+				"INVALID_TOKEN",
 			);
 		}
 
-		const user = users[0];
+		const user = rows[0];
 
-		// Check if already verified
-		if (user.is_verified) {
-			return res.json({
-				message: "Email already verified. You can now login.",
-				alreadyVerified: true,
-			});
-		}
-
-		// Check if token expired
-		if (new Date() > new Date(user.verification_token_expires)) {
-			throw new AppError(
-				"Verification token has expired. Please request a new one.",
-				400,
-				"TOKEN_EXPIRED"
-			);
-		}
-
-		// Verify the user
 		await pool.query(
-			"UPDATE users SET is_verified = TRUE, verification_token = NULL, verification_token_expires = NULL WHERE id = ?",
-			[user.id]
+			`UPDATE users
+             SET is_verified = 1,
+                 verification_token = NULL,
+                 verification_token_expires = NULL
+             WHERE id = ?`,
+			[user.id],
 		);
 
 		res.json({
@@ -162,51 +202,41 @@ const resendVerification = async (req, res, next) => {
 			throw new AppError("Email is required", 400, "VALIDATION_ERROR");
 		}
 
-		// Find user
+		const normalizedEmail = email.toString().trim().toLowerCase();
+
 		const [users] = await pool.query(
 			"SELECT id, name, email, is_verified FROM users WHERE email = ?",
-			[email]
+			[normalizedEmail],
 		);
 
 		if (users.length === 0) {
-			// Don't reveal if user exists or not (security)
 			return res.json({
-				message: "If an account exists with this email, a verification link has been sent.",
+				message:
+					"If an account exists with this email, a verification link has been sent.",
 			});
 		}
 
 		const user = users[0];
+		const isVerified = Number(user.is_verified) === 1;
 
-		// Check if already verified
-		if (user.is_verified) {
+		if (isVerified) {
 			return res.json({
 				message: "This account is already verified. You can login.",
 			});
 		}
 
-		// Generate new token
 		const verificationToken = generateVerificationToken();
 		const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
 		await pool.query(
 			"UPDATE users SET verification_token = ?, verification_token_expires = ? WHERE id = ?",
-			[verificationToken, tokenExpires, user.id]
+			[verificationToken, tokenExpires, user.id],
 		);
 
-		// Send verification email
-		try {
-			await sendVerificationEmail(user.email, user.name, verificationToken);
-		} catch (emailError) {
-			console.error("Failed to send verification email:", emailError);
-			throw new AppError(
-				"Failed to send verification email. Please try again later.",
-				500,
-				"EMAIL_SEND_FAILED"
-			);
-		}
+		await sendVerificationEmail(user.email, user.name, verificationToken);
 
-		res.json({
-			message: "Verification email sent. Please check your inbox.",
+		return res.json({
+			message: "Verification email sent",
 		});
 	} catch (error) {
 		next(error);

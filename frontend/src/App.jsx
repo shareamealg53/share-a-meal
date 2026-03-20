@@ -6,6 +6,7 @@ import Signup from "./Pages/Signup/Signup";
 import Login from "./Pages/Login/Login";
 import VerifyEmail from "./Pages/VerifyEmail/VerifyEmail";
 import "./Theme/Global.css";
+import { jwtDecode } from "jwt-decode";
 // import SmeDash from "./Components/SmeDash/SmeDash";
 import DashLayout from "./Components/DashLayout/DashLayout";
 import Sponsor from "./Pages/Sponsor/Sponsor";
@@ -35,7 +36,7 @@ const isTokenActive = (token) => {
 		const parts = token.split(".");
 		if (parts.length !== 3) return false;
 
-		const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+		const payload = jwtDecode(token);
 		if (!payload.exp) return true;
 		return payload.exp * 1000 > Date.now();
 	} catch {
@@ -83,23 +84,23 @@ function App() {
 						</ProtectedRoute>
 					}
 				/>
+				<Route
+					path="/sme"
+					element={
+						<ProtectedRoute allowedRoles={["sme"]}>
+							<DashLayout />
+						</ProtectedRoute>
+					}
+				/>
+				<Route
+					path="/dashboard"
+					element={
+						<ProtectedRoute>
+							<DashLayout />
+						</ProtectedRoute>
+					}
+				/>
 			</Route>
-			<Route
-				path="/sme"
-				element={
-					<ProtectedRoute allowedRoles={["sme"]}>
-						<DashLayout />
-					</ProtectedRoute>
-				}
-			/>
-			<Route
-				path="/dashboard"
-				element={
-					<ProtectedRoute>
-						<DashLayout />
-					</ProtectedRoute>
-				}
-			/>
 		</Routes>
 	);
 }

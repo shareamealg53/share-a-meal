@@ -1,9 +1,3 @@
--- Migration: Initial database schema
--- Created: 2026-02-21
--- Description: Create all core tables for Share-a-Meal platform
-
--- Note: Database is created by migrate.js script using DB_NAME from .env
-
 -- Users table: Core authentication and profile data
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -112,3 +106,4 @@ CREATE TABLE IF NOT EXISTS sponsorships (
   FOREIGN KEY (meal_id) REFERENCES meals(id),
   FOREIGN KEY (ngo_id) REFERENCES users(id)
 );
+CREATE INDEX idx_users_email ON users(email);
