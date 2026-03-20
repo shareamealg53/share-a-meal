@@ -114,14 +114,14 @@ const login = async (req, res, next) => {
 			throw new AppError("Invalid credentials", 401, "AUTH_FAILED");
 		}
 
-		const isVerified = Number(user.is_verified) === 1;
-		if (!isVerified) {
-			throw new AppError(
-				"Account is pending verification.",
-				403,
-				"ACCOUNT_UNVERIFIED",
-			);
-		}
+		// const isVerified = Number(user.is_verified) === 1;
+		// if (!isVerified) {
+		// 	throw new AppError(
+		// 		"Account is pending verification.",
+		// 		403,
+		// 		"ACCOUNT_UNVERIFIED",
+		// 	);
+		// }
 
 		const isMatch = await bcrypt.compare(password, user.password);
 		if (!isMatch) {
@@ -152,91 +152,91 @@ const login = async (req, res, next) => {
 	}
 };
 
-const verifyEmail = async (req, res, next) => {
-	try {
-		const { token } = req.params;
+// const verifyEmail = async (req, res, next) => {
+// 	try {
+// 		const { token } = req.params;
 
-		const [rows] = await pool.query(
-			`SELECT id, email
-             FROM users
-             WHERE verification_token = ?
-               AND verification_token_expires > NOW()
-               AND is_verified = 0
-             LIMIT 1`,
-			[token],
-		);
+// 		const [rows] = await pool.query(
+// 			`SELECT id, email
+//              FROM users
+//              WHERE verification_token = ?
+//                AND verification_token_expires > NOW()
+//                AND is_verified = 0
+//              LIMIT 1`,
+// 			[token],
+// 		);
 
-		if (rows.length === 0) {
-			throw new AppError(
-				"Invalid or expired verification token",
-				400,
-				"INVALID_TOKEN",
-			);
-		}
+// 		if (rows.length === 0) {
+// 			throw new AppError(
+// 				"Invalid or expired verification token",
+// 				400,
+// 				"INVALID_TOKEN",
+// 			);
+// 		}
 
-		const user = rows[0];
+// 		const user = rows[0];
 
-		await pool.query(
-			`UPDATE users
-             SET is_verified = 1,
-                 verification_token = NULL,
-                 verification_token_expires = NULL
-             WHERE id = ?`,
-			[user.id],
-		);
+// 		await pool.query(
+// 			`UPDATE users
+//              SET is_verified = 1,
+//                  verification_token = NULL,
+//                  verification_token_expires = NULL
+//              WHERE id = ?`,
+// 			[user.id],
+// 		);
 
-		res.json({
-			message: "Email verified successfully! You can now login.",
-			verified: true,
-		});
-	} catch (error) {
-		next(error);
-	}
-};
+// 		res.json({
+// 			message: "Email verified successfully! You can now login.",
+// 			verified: true,
+// 		});
+// 	} catch (error) {
+// 		next(error);
+// 	}
+// };
 
-const resendVerification = async (req, res, next) => {
-	try {
-		const genericMessage =
-			"If an account exists with this email, a verification email has been sent.";
+// const resendVerification = async (req, res, next) => {
+// 	try {
+// 		const genericMessage =
+// 			"If an account exists with this email, a verification email has been sent.";
 
-		const { email } = req.body || {};
-		if (!email) {
-			return res.status(200).json({ message: genericMessage });
-		}
+// 		const { email } = req.body || {};
+// 		if (!email) {
+// 			return res.status(200).json({ message: genericMessage });
+// 		}
 
-		const normalizedEmail = String(email).trim().toLowerCase();
+// 		const normalizedEmail = String(email).trim().toLowerCase();
 
-		const [users] = await pool.query(
-			"SELECT id, name, email, is_verified FROM users WHERE email = ? LIMIT 1",
-			[normalizedEmail],
-		);
+// 		const [users] = await pool.query(
+// 			"SELECT id, name, email, is_verified FROM users WHERE email = ? LIMIT 1",
+// 			[normalizedEmail],
+// 		);
 
-		// Always respond immediately
-		res.status(200).json({ message: genericMessage });
+// 		// Always respond immediately
+// 		res.status(200).json({ message: genericMessage });
 
-		// Background work only
-		setImmediate(async () => {
-			try {
-				if (!users.length) return;
-				const user = users[0];
-				if (Number(user.is_verified) === 1) return;
+// 		// Background work only
+// 		setImmediate(async () => {
+// 			try {
+// 				if (!users.length) return;
+// 				const user = users[0];
+// 				if (Number(user.is_verified) === 1) return;
 
-				const token = generateVerificationToken();
-				const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+// 				const token = generateVerificationToken();
+// 				const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-				await pool.query(
-					"UPDATE users SET verification_token = ?, verification_token_expires = ? WHERE id = ?",
-					[token, expires, user.id],
-				);
+// 				await pool.query(
+// 					"UPDATE users SET verification_token = ?, verification_token_expires = ? WHERE id = ?",
+// 					[token, expires, user.id],
+// 				);
 
-				await sendVerificationEmail(user.email, user.name, token);
-			} catch (err) {
-				console.error("RESEND_VERIFICATION_BACKGROUND_FAILED:", err.message);
-			}
-		});
-	} catch (error) {
-		next(error);
-	}
-};
+// 				await sendVerificationEmail(user.email, user.name, token);
+// 			} catch (err) {
+// 				console.error("RESEND_VERIFICATION_BACKGROUND_FAILED:", err.message);
+// 			}
+// 		});
+// 	} catch (error) {
+// 		next(error);
+// 	}
+// };
 
 module.exports = { register, login, verifyEmail, resendVerification };
