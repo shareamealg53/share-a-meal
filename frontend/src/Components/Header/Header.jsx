@@ -1,6 +1,7 @@
 import styles from "./Header.module.css";
 
-export default function Header({ user }) {
+export default function Header() {
+	const user = JSON.parse(localStorage.getItem("user"));
 	const displayName = user?.name || "User";
 
 	const displayRole =
@@ -16,7 +17,7 @@ export default function Header({ user }) {
 		<div className={styles.header}>
 			{/* LEFT SIDE */}
 			<div className={styles.left}>
-				<h2 className={styles.greeting}></h2>
+				<h2 className={styles.greeting}>Hello, {displayName} 👋</h2>
 				<p className={styles.subtext}></p>
 			</div>
 

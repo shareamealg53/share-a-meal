@@ -1,7 +1,7 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+
 import styles from "./Signup.module.css";
 import Openeye from "../../assets/Icons/eye-open.svg?react";
 import Closedeye from "../../assets/Icons/eye-closed.svg?react";
@@ -15,6 +15,7 @@ const clearAuthStorage = () => {
 	localStorage.removeItem("token");
 	localStorage.removeItem("role");
 	localStorage.removeItem("orgName");
+	localStorage.removeItem("user"); // ✅ added
 };
 
 function Signup() {
@@ -36,14 +37,12 @@ function Signup() {
 	const password = watch("password");
 	const role = watch("role");
 
-	const togglePassword = () => {
-		setShowPassword((prev) => !prev);
-	};
-
 	const onSubmit = async (data) => {
-		if (loading) return; // Prevent double submit
+		if (loading) return;
+
 		setLoading(true);
 		setServerMessage("");
+
 		try {
 			const payload = {
 				name: data.name,
@@ -59,11 +58,10 @@ function Signup() {
 					body: JSON.stringify(payload),
 				}),
 			);
-			// Ensure signup never reuses a stale logged-in session.
+
 			clearAuthStorage();
-			setServerMessage(
-				"Registration successful! Please check your email to verify your account. The verification link expires in 24 hours.",
-			);
+
+			setServerMessage("Registration successful! You can now log in.");
 			setIsSuccess(true);
 		} catch (error) {
 			setServerMessage(error?.message || "Signup failed");
@@ -73,17 +71,12 @@ function Signup() {
 	};
 
 	useEffect(() => {
-		// User entered signup flow: clear potentially stale auth state first.
 		clearAuthStorage();
 	}, []);
 
 	useEffect(() => {
 		if (isSuccess) {
-			const timer = setTimeout(() => {
-				navigate("/login");
-			}, 4000);
-
-			return () => clearTimeout(timer);
+			navigate("/login"); // ✅ instant redirect
 		}
 	}, [isSuccess, navigate]);
 
@@ -101,142 +94,75 @@ function Signup() {
 							required: "Full Name is required",
 							pattern: {
 								value: NAME_REGEX,
-								message:
-									"Name must be 2-80 letters and can include spaces, apostrophes, hyphens, or dots",
+								message: "Enter a valid name",
 							},
 						})}
 					/>
 					{errors.name && <p className={styles.error}>{errors.name.message}</p>}
 				</div>
+
 				<div className={styles.inputGroup}>
 					<input
 						type="email"
-						placeholder="Email Address"
+						placeholder="Email"
 						{...register("email", {
 							required: "Email is required",
 							pattern: {
 								value: EMAIL_REGEX,
-								message: "Enter a valid email address",
+								message: "Enter a valid email",
 							},
 						})}
 					/>
-					{errors.email && (
-						<p className={styles.error}>{errors.email.message}</p>
-					)}
 				</div>
+
 				<div className={styles.inputGroup}>
-					<select
-						className={styles.options}
-						{...register("role", { required: "Role is required" })}
-					>
-						<option value="">Choose your role</option>
-						<option value="sme">SMEs</option>
-						<option value="ngo">NGOs</option>
-						<option value="sponsor">Sponsors</option>
+					<select {...register("role", { required: true })}>
+						<option value="">Choose role</option>
+						<option value="sme">SME</option>
+						<option value="ngo">NGO</option>
+						<option value="sponsor">Sponsor</option>
 					</select>
-					{errors.role && <p className={styles.error}>{errors.role.message}</p>}
 				</div>
+
 				<div className={styles.inputGroup}>
 					<input
 						placeholder="Organization Name"
-						{...register("organization_name", {
-							validate: (value) => {
-								if (["sme", "ngo"].includes(role || "") && !value?.trim()) {
-									return "Organization Name is required for SMEs and NGOs";
-								}
-								return true;
-							},
+						{...register("organization_name")}
+					/>
+				</div>
+
+				<div className={styles.inputGroup}>
+					<input
+						type="password"
+						placeholder="Password"
+						{...register("password", {
+							required: true,
+							pattern: PASSWORD_REGEX,
 						})}
 					/>
-					{errors.organization_name && (
-						<p className={styles.error}>{errors.organization_name.message}</p>
-					)}
 				</div>
 
 				<div className={styles.inputGroup}>
-					<div className={styles.passwordWrapper}>
-						<input
-							type={showPassword ? "text" : "password"}
-							placeholder="Enter Password"
-							{...register("password", {
-								required: "Password is required",
-								pattern: {
-									value: PASSWORD_REGEX,
-									message:
-										"Password must be 8+ chars with uppercase, lowercase, number, and special character",
-								},
-							})}
-						/>
-						<span onClick={togglePassword}>
-							{showPassword ? <Openeye /> : <Closedeye />}
-						</span>
-					</div>
-					{errors.password && (
-						<p className={styles.error}>{errors.password.message}</p>
-					)}
-				</div>
-
-				<div className={styles.inputGroup}>
-					<div className={styles.passwordWrapper}>
-						<input
-							type={showConfirmPassword ? "text" : "password"}
-							placeholder="Confirm Password"
-							{...register("confirmPassword", {
-								required: "Please confirm your password",
-								validate: (value) =>
-									value === password || "Passwords do not match",
-							})}
-						/>
-						<span onClick={() => setShowConfirmPassword((prev) => !prev)}>
-							{showConfirmPassword ? <Openeye /> : <Closedeye />}
-						</span>
-					</div>
-					{errors.confirmPassword && (
-						<p className={styles.error}>{errors.confirmPassword.message}</p>
-					)}
+					<input
+						type="password"
+						placeholder="Confirm Password"
+						{...register("confirmPassword", {
+							validate: (value) =>
+								value === password || "Passwords do not match",
+						})}
+					/>
 				</div>
 
 				<button type="submit" disabled={loading}>
 					{loading ? "Signing up..." : "Signup"}
 				</button>
 
-				<div className={styles.inputGroup}>
-					<div className={styles.termsWrapper}>
-						<label className={styles.agree}>
-							<input
-								type="checkbox"
-								{...register("terms", {
-									required: "You must agree to the Terms and Services",
-								})}
-							/>
-							<span> I agree to the Terms and Services</span>
-						</label>
-					</div>
-					{errors.terms && (
-						<p className={styles.error}>{errors.terms.message}</p>
-					)}
-				</div>
-
 				<p>
-					Already have an account?
-					<NavLink
-						to="/login"
-						className={({ isActive }) => (isActive ? "active-link" : "link")}
-					>
-						<span className="login">Login</span>
-					</NavLink>
+					Already have an account? <NavLink to="/login">Login</NavLink>
 				</p>
 			</form>
 
-			{serverMessage && (
-				<div
-					className={`${styles.statusCard} ${
-						isSuccess ? styles.statusSuccess : styles.statusError
-					}`}
-				>
-					<p>{serverMessage}</p>
-				</div>
-			)}
+			{serverMessage && <p>{serverMessage}</p>}
 		</div>
 	);
 }

@@ -17,8 +17,8 @@ const router = express.Router();
 // Handle CORS preflight requests
 router.options("/register", (req, res) => res.sendStatus(204));
 router.options("/login", (req, res) => res.sendStatus(204));
-router.options("/verify/:token", (req, res) => res.sendStatus(204));
-router.options("/resend-verification", (req, res) => res.sendStatus(204));
+// router.options("/verify/:token", (req, res) => res.sendStatus(204));
+// router.options("/resend-verification", (req, res) => res.sendStatus(204));
 
 router.post(
 	"/register",
@@ -40,5 +40,10 @@ router.post(
 
 // // Resend verification email
 // router.post("/resend-verification", resendVerification); // keep before any protected routes
+
+// Forgot password endpoint
+router.post("/forgot-password", forgotPassword);
+// Reset password endpoint
+router.post("/reset-password", resetPassword);
 
 module.exports = router;

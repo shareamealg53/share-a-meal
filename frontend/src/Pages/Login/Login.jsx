@@ -1,7 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 import styles from "./Login.module.css";
 import Openeye from "../../assets/Icons/eye-open.svg?react";
@@ -13,6 +12,7 @@ const clearAuthStorage = () => {
 	localStorage.removeItem("token");
 	localStorage.removeItem("role");
 	localStorage.removeItem("orgName");
+	localStorage.removeItem("user"); // ✅ important
 };
 
 const isTokenActive = (token) => {
@@ -21,7 +21,10 @@ const isTokenActive = (token) => {
 		const parts = token.split(".");
 		if (parts.length !== 3) return false;
 
-		const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+		const payload = JSON.parse(
+			atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+		);
+
 		if (!payload.exp) return true;
 		return payload.exp * 1000 > Date.now();
 	} catch {
@@ -40,15 +43,12 @@ function Login() {
 	const [token, setToken] = useState(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
-	const [isUnverified, setIsUnverified] = useState(false);
-	const [userEmail, setUserEmail] = useState("");
-	const [resendLoading, setResendLoading] = useState(false);
+
+	const navigate = useNavigate();
 
 	const togglePassword = () => {
 		setShowPassword((prev) => !prev);
 	};
-
-	const navigate = useNavigate();
 
 	const getRoleRoute = (role) => {
 		switch ((role || "").toLowerCase()) {
@@ -58,7 +58,6 @@ function Login() {
 				return "/ngo";
 			case "sponsor":
 				return "/sponsor";
-
 			default:
 				return "/dashboard";
 		}
@@ -81,8 +80,7 @@ function Login() {
 	const onSubmit = async (data) => {
 		setLoading(true);
 		setServerMessage("");
-		setIsUnverified(false);
-		setUserEmail(data.email);
+
 		try {
 			const result = await import("../../api").then((m) =>
 				m.apiRequest("/auth/login", {
@@ -90,43 +88,28 @@ function Login() {
 					body: JSON.stringify(data),
 				}),
 			);
+
+			// ✅ STORE EVERYTHING PROPERLY
 			localStorage.setItem("token", result.token);
+
+			if (result?.user) {
+				localStorage.setItem("user", JSON.stringify(result.user));
+			}
+
 			if (result?.user?.role) {
 				localStorage.setItem("role", String(result.user.role).toLowerCase());
 			}
+
 			if (result?.user?.organization_name) {
 				localStorage.setItem("orgName", result.user.organization_name);
 			}
+
 			setToken(result.token);
 		} catch (error) {
-			const errorMessage = error?.message || "Login failed";
-			setServerMessage(errorMessage);
+			setServerMessage(error?.message || "Login failed");
 			clearAuthStorage();
-			// Check if error is due to unverified account
-			if (error?.code === "ACCOUNT_UNVERIFIED" || errorMessage.includes("pending verification")) {
-				setIsUnverified(true);
-			}
 		} finally {
 			setLoading(false);
-		}
-	};
-
-	const handleResendVerification = async () => {
-		setResendLoading(true);
-		setServerMessage("");
-		try {
-			await import("../../api").then((m) =>
-				m.apiRequest("/auth/resend-verification", {
-					method: "POST",
-					body: JSON.stringify({ email: userEmail }),
-				}),
-			);
-			setServerMessage("Verification email sent! Please check your inbox.");
-			setIsUnverified(false);
-		} catch (error) {
-			setServerMessage(error?.message || "Failed to resend verification email");
-		} finally {
-			setResendLoading(false);
 		}
 	};
 
@@ -141,7 +124,7 @@ function Login() {
 		<div className={styles.login}>
 			<form className={styles.form} onSubmit={handleSubmit(onSubmit)}>
 				<h2>
-					Welcome <span className={styles.back}>back !</span>
+					Welcome <span className={styles.back}>back!</span>
 				</h2>
 
 				<div className={styles.inputGroup}>
@@ -160,6 +143,7 @@ function Login() {
 						<p className={styles.error}>{errors.email.message}</p>
 					)}
 				</div>
+
 				<div className={styles.inputGroup}>
 					<div className={styles.passwordWrapper}>
 						<input
@@ -180,9 +164,10 @@ function Login() {
 					{errors.password && (
 						<p className={styles.error}>{errors.password.message}</p>
 					)}
+					<p className={styles.forgot}>
+						<NavLink to="/forgot-password">Forgot password?</NavLink>
+					</p>
 				</div>
-
-				{errors.password && <p>{errors.password.message}</p>}
 
 				<button type="submit" disabled={loading}>
 					{loading ? "Logging in..." : "Login"}
@@ -195,27 +180,12 @@ function Login() {
 					</label>
 
 					<p>
-						Don’t have an account?{" "}
-						<NavLink
-							to="/signup"
-							className={({ isActive }) => (isActive ? "active-link" : "link")}
-						>
-							Signup
-						</NavLink>
+						Don’t have an account? <NavLink to="/signup">Signup</NavLink>
 					</p>
 				</div>
 			</form>
 
-			{serverMessage && <p className={isUnverified ? styles.error : ""}>{serverMessage}</p>}
-			{isUnverified && (
-				<button 
-					onClick={handleResendVerification} 
-					disabled={resendLoading}
-					className={styles.resendButton}
-				>
-					{resendLoading ? "Sending..." : "Resend Verification Email"}
-				</button>
-			)}
+			{serverMessage && <p className={styles.error}>{serverMessage}</p>}
 		</div>
 	);
 }

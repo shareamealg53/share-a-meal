@@ -104,7 +104,37 @@ const sendVerificationEmail = async (email, name, token) => {
 	return info;
 };
 
+async function sendResetPasswordEmail(email, name, token) {
+	const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+	const transporter = await createTransporter();
+
+	const mailOptions = {
+		from: `"Share A Meal" <${process.env.SMTP_FROM}>`,
+		to: email,
+		subject: "Reset your password",
+		html: `<p>Hello ${name},</p>
+            <p>Click <a href="${resetUrl}">here</a> to reset your password. This link expires in 1 hour.</p>`,
+		text: `Reset your password: ${resetUrl}`,
+	};
+
+	const sendPromise = transporter.sendMail(mailOptions);
+	const info = await withTimeout(
+		sendPromise,
+		EMAIL_SEND_TIMEOUT_MS,
+		"sendResetPasswordEmail",
+	);
+
+	if (process.env.USE_ETHEREAL === "true") {
+		console.log("📧 Preview URL:", nodemailer.getTestMessageUrl(info));
+	} else {
+		console.log(`✅ Reset password email sent to ${email}`);
+	}
+
+	return info;
+}
+
 module.exports = {
 	generateVerificationToken,
 	sendVerificationEmail,
+	sendResetPasswordEmail,
 };

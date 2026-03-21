@@ -10,6 +10,8 @@ import { jwtDecode } from "jwt-decode";
 // import SmeDash from "./Components/SmeDash/SmeDash";
 import DashLayout from "./Components/DashLayout/DashLayout";
 import Sponsor from "./Pages/Sponsor/Sponsor";
+import ForgotPassword from "./Pages/ForgotPassword/ForgotPassword";
+import ResetPassword from "./Pages/ResetPassword/ResetPassword";
 
 const getDefaultRouteByRole = (role) => {
 	switch ((role || "").toLowerCase()) {
@@ -100,6 +102,8 @@ function App() {
 						</ProtectedRoute>
 					}
 				/>
+				<Route path="/forgot-password" element={<ForgotPassword />} />
+				<Route path="/reset-password" element={<ResetPassword />} />
 			</Route>
 		</Routes>
 	);

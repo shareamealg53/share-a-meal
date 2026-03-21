@@ -65,14 +65,25 @@ const register = async (req, res, next) => {
 			],
 		);
 
-		// FIX: fail loudly if email cannot be sent
-		await sendVerificationEmail(normalizedEmail, name, verificationToken);
+		// await sendVerificationEmail(normalizedEmail, name, verificationToken);
+		// sendVerificationEmail(normalizedEmail, name, verificationToken).catch(
+		//     (err) => {
+		//         console.error("Failed to send verification email:", err.message);
+		//     },
+		// );
 
 		res.status(201).json({
 			message: "User registered successfully",
 			userId: result.insertId,
 			note: "Please check your email to verify your account. The verification link expires in 24 hours.",
 		});
+
+		// Send email in the background, don't block the response
+		// sendVerificationEmail(normalizedEmail, name, verificationToken).catch(
+		//     (err) => {
+		//         console.error("Failed to send verification email:", err.message);
+		//     },
+		// );
 	} catch (error) {
 		next(error);
 	}
@@ -238,5 +249,70 @@ const login = async (req, res, next) => {
 // 		next(error);
 // 	}
 // };
+
+const resetPassword = async (req, res, next) => {
+	try {
+		const { token, password } = req.body;
+		if (!token || !password)
+			return res.status(400).json({ message: "Token and password required" });
+
+		const [users] = await pool.query(
+			"SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW()",
+			[token],
+		);
+
+		if (!users.length)
+			return res.status(400).json({ message: "Invalid or expired token" });
+
+		const hashedPassword = await bcrypt.hash(password, 10);
+
+		await pool.query(
+			"UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?",
+			[hashedPassword, users[0].id],
+		);
+
+		return res.json({
+			message: "Password reset successful. You can now log in.",
+		});
+	} catch (err) {
+		next(err);
+	}
+};
+
+const forgotPassword = async (req, res, next) => {
+	try {
+		const { email } = req.body;
+		if (!email) return res.status(400).json({ message: "Email required" });
+
+		const [users] = await pool.query(
+			"SELECT id, name FROM users WHERE email = ?",
+			[email],
+		);
+		if (!users.length) {
+			// Always respond the same for security
+			return res
+				.status(200)
+				.json({ message: "If this email exists, a reset link has been sent." });
+		}
+
+		const user = users[0];
+		const resetToken = crypto.randomBytes(32).toString("hex");
+		const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+		await pool.query(
+			"UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?",
+			[resetToken, resetTokenExpiry, user.id],
+		);
+
+		// Send email in background
+		sendResetPasswordEmail(email, user.name, resetToken).catch(console.error);
+
+		return res
+			.status(200)
+			.json({ message: "If this email exists, a reset link has been sent." });
+	} catch (err) {
+		next(err);
+	}
+};
 
 module.exports = { register, login };
