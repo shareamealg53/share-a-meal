@@ -21,7 +21,7 @@ export default function ResetPassword() {
 				}),
 			);
 			setMessage("Password reset successful. You can now log in.");
-		} catch (err) {
+		} catch {
 			setMessage("Reset failed. The link may be invalid or expired.");
 		} finally {
 			setLoading(false);

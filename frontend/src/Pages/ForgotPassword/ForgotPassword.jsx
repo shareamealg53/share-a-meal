@@ -20,7 +20,7 @@ export default function ForgotPassword() {
 				}),
 			);
 			setMessage("If this email exists, a reset link has been sent.");
-		} catch (error) {
+		} catch {
 			setMessage("Something went wrong. Please try again.");
 		} finally {
 			setLoading(false);

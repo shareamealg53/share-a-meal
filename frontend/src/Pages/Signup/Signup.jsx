@@ -28,14 +28,13 @@ function Signup() {
 
 	const [serverMessage, setServerMessage] = useState("");
 	const [isSuccess, setIsSuccess] = useState(false);
-	const [showPassword, setShowPassword] = useState(false);
-	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+	
 	const [loading, setLoading] = useState(false);
 
 	const navigate = useNavigate();
 
 	const password = watch("password");
-	const role = watch("role");
+
 
 	const onSubmit = async (data) => {
 		if (loading) return;
