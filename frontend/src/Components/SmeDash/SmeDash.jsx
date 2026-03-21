@@ -18,7 +18,11 @@ export default function SmeDash() {
 	useEffect(() => {
 		const fetchSMEData = async () => {
 			try {
-				const mealsRes = await apiRequest("/meals/my");
+				// 🔥 Use the correct endpoint for SME's own meals
+				const token = localStorage.getItem("token");
+				const mealsRes = await apiRequest("/meals/my", {
+					headers: { Authorization: `Bearer ${token}` },
+				});
 
 				const meals = mealsRes.meals || [];
 

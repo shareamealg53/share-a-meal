@@ -8,7 +8,8 @@ import Closedeye from "../../assets/Icons/eye-closed.svg?react";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_REGEX = /^[A-Za-z][A-Za-z\s'-.]{1,79}$/;
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
+const PASSWORD_REGEX =
+	/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/;
 
 const clearAuthStorage = () => {
 	localStorage.removeItem("token");
@@ -40,6 +41,7 @@ function Signup() {
 	};
 
 	const onSubmit = async (data) => {
+		if (loading) return; // Prevent double submit
 		setLoading(true);
 		setServerMessage("");
 		try {
@@ -60,7 +62,7 @@ function Signup() {
 			// Ensure signup never reuses a stale logged-in session.
 			clearAuthStorage();
 			setServerMessage(
-				"Registration successful! Please check your email to verify your account. The verification link expires in 24 hours."
+				"Registration successful! Please check your email to verify your account. The verification link expires in 24 hours.",
 			);
 			setIsSuccess(true);
 		} catch (error) {
