@@ -10,7 +10,7 @@ body{
   width: 100%;              
 }
 .container {
-  margin: 1rem 5rem;    
+  margin: 1 5rem;    
 	align-items: center;
 	justify-content: center;
 }
