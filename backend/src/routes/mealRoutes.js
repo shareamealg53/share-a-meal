@@ -12,7 +12,7 @@ const {
 const {
 	authenticate,
 	requireRole,
-	// requireVerified,
+	// ...existing code...
 } = require("../middleware/auth");
 
 const { validateIdParam } = require("../middleware/validate");

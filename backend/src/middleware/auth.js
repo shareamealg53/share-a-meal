@@ -6,7 +6,6 @@ const pool = require("../config/db");
 const catchAsync = require("../utils/catchAsync");
 
 const authenticate = catchAsync(async (req, res, next) => {
-
 	const token = req.headers.authorization?.split(" ")[1];
 
 	if (!token) {
@@ -32,11 +31,8 @@ const authenticate = catchAsync(async (req, res, next) => {
 });
 
 const requireRole = (...roles) => {
-	
 	return (req, res, next) => {
-		
 		if (!roles.includes(req.user.role)) {
-			
 			return next(
 				new AppError(
 					"Access denied - insufficient permissions",
@@ -45,11 +41,9 @@ const requireRole = (...roles) => {
 				),
 			);
 		}
-		
+
 		next();
 	};
 };
 
-
-
-module.exports = { authenticate, requireRole, requireVerified };
+module.exports = { authenticate, requireRole };
