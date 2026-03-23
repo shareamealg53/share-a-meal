@@ -194,7 +194,7 @@ describe("Auth Endpoints", () => {
 			// REMOVE old queued mockResolvedValueOnce here (if present)
 		});
 
-		beforeEach(() => {
+		beforeEach(() => {  
 			pool.query.mockReset();
 		});
 

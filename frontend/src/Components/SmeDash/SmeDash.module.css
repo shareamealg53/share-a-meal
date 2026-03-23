@@ -1,100 +1,112 @@
 .dashboard {
-  padding: 30px;
+	padding: 30px;
 }
 
 .header {
-  margin-bottom: 20px;
+	margin-bottom: 20px;
 }
 
 .subtext {
-  color: #777;
+	color: #777;
 }
 
 .statsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 20px;
+	margin-bottom: 30px;
 }
 
 .card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+	background: #fff;
+	border-radius: 12px;
+	padding: 20px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .greenCard {
-  background: #e8f8f0;
+	background: #e8f8f0;
 }
 
 .section {
-  margin-bottom: 30px;
+	margin-bottom: 30px;
 }
 
 .form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
 .form input,
 .form textarea {
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
+	padding: 10px;
+	border-radius: 6px;
+	border: 1px solid #ddd;
 }
 
 .form input:focus,
 .form textarea:focus {
-  outline: none;
-  border: 1px solid #ff9800;
-  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+	outline: none;
+	border: 1px solid var(--Green);
+	box-shadow: 0 0 0 2px rgba(128, 255, 0, 0.2);
+}
+
+.form select {
+	padding: 10px;
+	border-radius: 6px;
+	border: 1px solid #ddd;
+}
+
+.form select:focus {
+	outline: none;
+	border: 1px solid var(--Green);
+	box-shadow: 0 0 0 2px rgba(128, 255, 0, 0.2);
 }
 
 .form button {
-  background: #ff9800;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-top: 5px;
+	background: var(--Green);
+	color: white;
+	border: none;
+	padding: 12px;
+	border-radius: 6px;
+	cursor: pointer;
+	margin-top: 5px;
 }
 
 .mealsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 15px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 15px;
 }
 
 .mealCard {
-  background: #fff8f0;
-  padding: 15px;
-  border-radius: 10px;
+	background: #fff8f0;
+	padding: 15px;
+	border-radius: 10px;
 }
 
 .actionBtn {
-  margin-top: 10px;
-  background: #ff9800;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 5px;
-  cursor: pointer;
+	margin-top: 10px;
+	background: var(--Green);
+	color: white;
+	border: none;
+	padding: 8px 12px;
+	border-radius: 5px;
+	cursor: pointer;
 }
 
 .empty {
-  background: #fff8f0;
-  padding: 15px;
-  border-radius: 8px;
-  text-align: center;
+	background: #f0fff3;
+	padding: 15px;
+	border-radius: 8px;
+	text-align: center;
 }
 
 .impactStats {
-  display: flex;
-  gap: 20px;
-  background: #fff8f0;
-  padding: 15px;
-  border-radius: 8px;
+	display: flex;
+	gap: 20px;
+	background: #f0fff3;
+	padding: 15px;
+	border-radius: 8px;
 }

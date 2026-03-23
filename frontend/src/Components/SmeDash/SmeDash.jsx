@@ -12,59 +12,122 @@ export default function SmeDash() {
 		},
 	});
 
+	const [form, setForm] = useState({
+		title: "",
+		description: "",
+		quantity: "",
+		unit: "",
+		prepared_at: "",
+		storage_type: "",
+		food_type: "",
+		food_status: "",
+	});
+
 	const [loading, setLoading] = useState(true);
+	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState(null);
 
+	/* ================= FETCH DATA ================= */
+	const fetchSMEData = async () => {
+		try {
+			const token = localStorage.getItem("token");
+
+			const res = await apiRequest("/meals/my", {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			const meals = res.meals || [];
+
+			const totalMeals = meals.length;
+			const totalPickups = meals.filter((m) => m.status === "PICKED_UP").length;
+			const expired = meals.filter((m) => m.status === "EXPIRED").length;
+
+			setData({
+				meals,
+				stats: {
+					totalMeals,
+					totalPickups,
+					expiryRate: totalMeals ? Math.round((expired / totalMeals) * 100) : 0,
+				},
+			});
+		} catch (err) {
+			console.error(err);
+			setError(err?.message || "Failed to load dashboard");
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	useEffect(() => {
-		const fetchSMEData = async () => {
-			try {
-				// 🔥 Use the correct endpoint for SME's own meals
-				const token = localStorage.getItem("token");
-				const mealsRes = await apiRequest("/meals/my", {
-					headers: { Authorization: `Bearer ${token}` },
-				});
-
-				const meals = mealsRes.meals || [];
-
-				const totalMeals = meals.length;
-				const totalPickups = meals.filter(
-					(m) => m.status === "PICKED_UP",
-				).length;
-				const expired = meals.filter((m) => m.status === "EXPIRED").length;
-
-				setData({
-					meals,
-					stats: {
-						totalMeals,
-						totalPickups,
-						expiryRate: totalMeals
-							? Math.round((expired / totalMeals) * 100)
-							: 0,
-					},
-				});
-			} catch (err) {
-				console.error("Error fetching SME data:", err);
-				setError(err?.message || "Failed to load dashboard");
-			} finally {
-				setLoading(false);
-			}
-		};
-
 		fetchSMEData();
 	}, []);
 
-	if (loading)
+	/* ================= FORM HANDLERS ================= */
+	const handleChange = (e) => {
+		const { name, value } = e.target;
+		setForm((prev) => ({
+			...prev,
+			[name]: value,
+		}));
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		setSubmitting(true);
+		setError(null);
+
+		try {
+			const token = localStorage.getItem("token");
+
+			await apiRequest("/meals", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({
+					...form,
+					quantity: Number(form.quantity), // ✅ ensure number
+				}),
+			});
+
+			// ✅ Reset form
+			setForm({
+				title: "",
+				description: "",
+				quantity: "",
+				unit: "",
+				prepared_at: "",
+				storage_type: "",
+				food_type: "",
+				food_status: "",
+			});
+
+			// ✅ Refresh data instead of reload
+			await fetchSMEData();
+		} catch (err) {
+			setError(err?.message || "Failed to create meal");
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	/* ================= UI STATES ================= */
+	if (loading) {
 		return <div className={styles.dashboard}>Loading dashboard...</div>;
-	if (error)
+	}
+
+	if (error) {
 		return (
 			<div className={styles.dashboard}>
-				<p style={{ color: "red" }}>Error: {error}</p>
+				<p className={styles.error}>Error: {error}</p>
 			</div>
 		);
+	}
 
 	return (
 		<div className={styles.dashboard}>
-			{/* Header */}
+			{/* ===== HEADER ===== */}
 			<div className={styles.header}>
 				<h2>Hello, Welcome Back 👋</h2>
 				<p className={styles.subtext}>
@@ -72,7 +135,7 @@ export default function SmeDash() {
 				</p>
 			</div>
 
-			{/* Stats */}
+			{/* ===== STATS ===== */}
 			<div className={styles.statsGrid}>
 				<div className={styles.card}>
 					<h4>Total Meals</h4>
@@ -90,20 +153,98 @@ export default function SmeDash() {
 				</div>
 			</div>
 
-			{/* Create Meal */}
+			{/* ===== CREATE MEAL ===== */}
 			<div className={styles.section}>
 				<h3>Create Meal</h3>
-				<form className={styles.form}>
-					<input placeholder="Meal Title" required />
-					<textarea placeholder="Description" required />
-					<input type="number" placeholder="Quantity" min="1" required />
-					<input type="datetime-local" required />
-					<input placeholder="Pickup Window (e.g. 2pm - 5pm)" />
-					<button type="submit">Create Meal</button>
+
+				<form className={styles.form} onSubmit={handleSubmit}>
+					<input
+						name="title"
+						placeholder="Meal Title"
+						required
+						value={form.title}
+						onChange={handleChange}
+					/>
+
+					<textarea
+						name="description"
+						placeholder="Description"
+						required
+						value={form.description}
+						onChange={handleChange}
+					/>
+
+					<input
+						type="number"
+						name="quantity"
+						placeholder="Quantity"
+						min="1"
+						required
+						value={form.quantity}
+						onChange={handleChange}
+					/>
+
+					<select
+						name="unit"
+						required
+						value={form.unit}
+						onChange={handleChange}
+					>
+						<option value="">Select Unit</option>
+						<option value="kg">kg</option>
+						<option value="servings">servings</option>
+						<option value="packs">packs</option>
+						<option value="pieces">pieces</option>
+					</select>
+
+					<input
+						type="datetime-local"
+						name="prepared_at"
+						required
+						value={form.prepared_at}
+						onChange={handleChange}
+					/>
+
+					<select
+						name="storage_type"
+						value={form.storage_type}
+						onChange={handleChange}
+					>
+						<option value="">Storage Type</option>
+						<option value="Room Temperature">Room Temperature</option>
+						<option value="Refrigerated">Refrigerated</option>
+					</select>
+
+					<select
+						name="food_type"
+						value={form.food_type}
+						onChange={handleChange}
+					>
+						<option value="">Food Type</option>
+						<option value="Rice">Rice</option>
+						<option value="Bread">Bread</option>
+						<option value="Soup">Soup</option>
+						<option value="Beans">Beans</option>
+					</select>
+
+					<select
+						name="food_status"
+						value={form.food_status}
+						onChange={handleChange}
+					>
+						<option value="">Food Status</option>
+						<option value="Fresh">Fresh</option>
+						<option value="Moderate">Moderate</option>
+						<option value="Spoiled">Spoiled</option>
+					</select>
+
+					<button type="submit" disabled={submitting}>
+						{submitting ? "Creating..." : "Create Meal"}
+					</button>
 				</form>
 			</div>
 
-			{/* Meals List */}
+			{/* ===== MEALS LIST ===== */}
 			<div className={styles.section}>
 				<h3>Your Meals</h3>
 
@@ -116,6 +257,7 @@ export default function SmeDash() {
 								<h4>{meal.title}</h4>
 								<p>Status: {meal.status}</p>
 								<p>Quantity: {meal.quantity}</p>
+
 								<button className={styles.actionBtn}>Mark Ready</button>
 							</div>
 						))}
@@ -123,7 +265,7 @@ export default function SmeDash() {
 				)}
 			</div>
 
-			{/* Impact */}
+			{/* ===== IMPACT ===== */}
 			<div className={styles.section}>
 				<h3>Impact</h3>
 				<div className={styles.impactStats}>

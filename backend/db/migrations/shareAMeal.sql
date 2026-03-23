@@ -8,9 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
   organization_name VARCHAR(255),
   address TEXT,
   phone VARCHAR(20),
-  is_verified BOOLEAN DEFAULT FALSE,
-  verification_token VARCHAR(255),
-  verification_token_expires DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   reset_token VARCHAR(255) DEFAULT NULL,
   reset_token_expires DATETIME DEFAULT NULL
@@ -108,4 +105,6 @@ CREATE TABLE IF NOT EXISTS sponsorships (
   FOREIGN KEY (meal_id) REFERENCES meals(id),
   FOREIGN KEY (ngo_id) REFERENCES users(id)
 );
-CREATE INDEX idx_users_email ON users(email);
+
+-- Only create the index if it doesn't exist (MySQL 8+)
+-- CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
