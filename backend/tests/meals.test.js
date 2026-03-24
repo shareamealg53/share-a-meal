@@ -128,6 +128,16 @@ describe("Meal Endpoints", () => {
 
 			expect(res.status).toBe(404);
 		});
+
+		test("Should allow SME to mark meal as PICKUP_READY", async () => {
+			const res = await request(app)
+				.patch("/meals/1")
+				.set("Authorization", `Bearer ${smeToken}`)
+				.send({ status: "PICKUP_READY" });
+
+			expect(res.status).toBe(200);
+			// Optionally: check response message or mock DB call
+		});
 	});
 
 	// ---------------- DELETE ----------------

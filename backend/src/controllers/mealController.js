@@ -226,21 +226,43 @@ const getMyMeals = async (req, res, next) => {
 	}
 };
 
+const allowedFields = {
+	title: "title",
+	description: "description",
+	quantity: "quantity",
+	unit: "unit",
+	status: "status",
+};
+
 const updateMeal = async (req, res, next) => {
 	try {
 		const { mealId } = req.params;
-		const { title, description, quantity, unit } = req.body;
+		const updates = req.body;
 
-		// ✅ FIX: VALIDATION FIRST
-		if (quantity !== undefined) {
-			const numericQuantity = Number(quantity);
-
+		// Add this block for quantity validation
+		if (updates.quantity !== undefined) {
+			const numericQuantity = Number(updates.quantity);
 			if (!Number.isFinite(numericQuantity) || numericQuantity <= 0) {
 				throw new AppError("Invalid quantity", 400, "VALIDATION_ERROR", {
 					field: "quantity",
-					value: quantity,
+					value: updates.quantity,
 				});
 			}
+		}
+
+		// Validate fields
+		const fields = [];
+		const values = [];
+
+		for (const key of Object.keys(updates)) {
+			if (allowedFields[key] !== undefined && updates[key] !== undefined) {
+				fields.push(`${allowedFields[key]} = ?`);
+				values.push(updates[key]);
+			}
+		}
+
+		if (fields.length === 0) {
+			throw new AppError("No fields to update", 400, "VALIDATION_ERROR");
 		}
 
 		const [meals] = await pool.query(
@@ -259,30 +281,6 @@ const updateMeal = async (req, res, next) => {
 
 		if (meal.restaurant_id !== req.user.id) {
 			throw new AppError("Forbidden", 403, "FORBIDDEN");
-		}
-
-		const fields = [];
-		const values = [];
-
-		if (title !== undefined) {
-			fields.push("title = ?");
-			values.push(title);
-		}
-		if (description !== undefined) {
-			fields.push("description = ?");
-			values.push(description);
-		}
-		if (quantity !== undefined) {
-			fields.push("quantity = ?");
-			values.push(quantity);
-		}
-		if (unit !== undefined) {
-			fields.push("unit = ?");
-			values.push(unit);
-		}
-
-		if (fields.length === 0) {
-			throw new AppError("No fields to update", 400, "VALIDATION_ERROR");
 		}
 
 		values.push(mealId);

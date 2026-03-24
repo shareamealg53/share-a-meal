@@ -112,6 +112,23 @@ export default function SmeDash() {
 		}
 	};
 
+	const handleMarkReady = async (mealId) => {
+		try {
+			const token = localStorage.getItem("token");
+			await apiRequest(`/meals/${mealId}`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify({ status: "PICKUP_READY" }),
+			});
+			await fetchSMEData(); // Refresh meals
+		} catch (err) {
+			setError(err?.message || "Failed to update meal status");
+		}
+	};
+
 	/* ================= UI STATES ================= */
 	if (loading) {
 		return <div className={styles.dashboard}>Loading dashboard...</div>;
@@ -258,7 +275,12 @@ export default function SmeDash() {
 								<p>Status: {meal.status}</p>
 								<p>Quantity: {meal.quantity}</p>
 
-								<button className={styles.actionBtn}>Mark Ready</button>
+								<button
+									className={styles.actionBtn}
+									onClick={() => handleMarkReady(meal.id)}
+								>
+									Mark Ready
+								</button>
 							</div>
 						))}
 					</div>

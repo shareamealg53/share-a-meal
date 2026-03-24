@@ -81,9 +81,13 @@
 }
 
 .mealCard {
-	background: #fff8f0;
+	background: #f7fff0;
 	padding: 15px;
 	border-radius: 10px;
+	outline: none;
+	border: 1px solid var(--Green);
+	box-shadow: 0 0 0 2px rgba(128, 255, 0, 0.2);
+
 }
 
 .actionBtn {
