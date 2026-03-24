@@ -162,6 +162,7 @@ export default function Sponsor(){
           <p><strong>Meals Sponsored:</strong> 38</p>
           <p><strong>People Helped:</strong> 187</p>
           <p><strong>Campaigns Supported:</strong> 8</p>
+           <p><strong>Campaigns Supported:</strong> 8</p>
         </div>
 
       </div>
