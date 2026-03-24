@@ -73,7 +73,7 @@ export default function NgoDash() {
 	const handleReserve = async (mealId) => {
 		try {
 			const token = localStorage.getItem("token");
-			await apiRequest(`/claims/${mealId}`, {
+			await apiRequest(`/claims/meal/${mealId}`, {
 				method: "POST",
 				headers: { Authorization: `Bearer ${token}` },
 			});

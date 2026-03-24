@@ -9,10 +9,7 @@ const {
 	confirmCompletion,
 } = require("../controllers/claimController");
 
-const {
-	authenticate,
-	requireRole,
-} = require("../middleware/auth");
+const { authenticate, requireRole } = require("../middleware/auth");
 const { validateIdParam } = require("../middleware/validate");
 
 const router = express.Router();
