@@ -106,12 +106,7 @@ export default function NgoDash() {
 
 	return (
 		<div className={styles.dashboard}>
-			<header className={styles.header}>
-				<h1 tabIndex="0">Hello, Welcome Back 👋</h1>
-				<p className={styles.subtext}>
-					{ngo.name} • Operating in {ngo.location.areas.join(" & ")}
-				</p>
-			</header>
+			<NgoNavbar ngoName={ngo?.name} />
 			{/* DASHBOARD CARDS */}
 			<section className={styles.statsGrid} aria-label="NGO Stats">
 				<div
