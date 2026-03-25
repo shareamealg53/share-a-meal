@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import styles from "./NgoNavbar.module.css";
+import styles from "./NgoDash.module.css";
 
 export default function NgoNavbar({ ngoName }) {
 	const navigate = useNavigate();
