@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../NgoDash/NgoDash.module.css";
 import { apiRequest } from "../../api";
+import NgoNavbar from "./NgoNavbar";
 
 export default function NgoDash() {
 	const [ngo, setNgo] = useState(null);
@@ -64,14 +65,23 @@ export default function NgoDash() {
 	}, [fetchNGOData]);
 
 	if (loading)
-		return <div className={styles.dashboard}>Loading dashboard...</div>;
+		return (
+			<div className={styles.dashboard} aria-busy="true" aria-live="polite">
+				Loading dashboard...
+			</div>
+		);
 	if (error)
 		return (
-			<div className={styles.dashboard}>
+			<div className={styles.dashboard} role="alert" aria-live="assertive">
 				<p style={{ color: "red" }}>Error: {error}</p>
 			</div>
 		);
-	if (!ngo) return <div className={styles.dashboard}>No data available</div>;
+	if (!ngo)
+		return (
+			<div className={styles.dashboard} aria-live="polite">
+				No data available
+			</div>
+		);
 
 	const handleReserve = async (mealId) => {
 		setReservingId(mealId);
@@ -96,81 +106,107 @@ export default function NgoDash() {
 
 	return (
 		<div className={styles.dashboard}>
-			<div className={styles.header}>
-				<h2>Hello, Welcome Back 👋</h2>
+			<header className={styles.header}>
+				<h1 tabIndex="0">Hello, Welcome Back 👋</h1>
 				<p className={styles.subtext}>
 					{ngo.name} • Operating in {ngo.location.areas.join(" & ")}
 				</p>
-			</div>
+			</header>
 			{/* DASHBOARD CARDS */}
-			<div className={styles.statsGrid}>
-				<div className={styles.card}>
-					<h4>Available Nearby</h4>
-					<h2>{ngo.stats.availableNearby}</h2>
+			<section className={styles.statsGrid} aria-label="NGO Stats">
+				<div
+					className={styles.card}
+					tabIndex="0"
+					aria-label={`Available Nearby: ${ngo.stats.availableNearby}`}
+				>
+					<h2>Available Nearby</h2>
+					<p className={styles.cardStat}>{ngo.stats.availableNearby}</p>
 					<p className={styles.cardSubtext}>Meals you can claim now</p>
 				</div>
-				<div className={`${styles.card} ${styles.greenCard}`}>
-					<h4>Reserved Meals</h4>
-					<h2>{ngo.stats.reservedMeals}</h2>
+				<div
+					className={`${styles.card} ${styles.greenCard}`}
+					tabIndex="0"
+					aria-label={`Reserved Meals: ${ngo.stats.reservedMeals}`}
+				>
+					<h2>Reserved Meals</h2>
+					<p className={styles.cardStat}>{ngo.stats.reservedMeals}</p>
 					<p className={styles.cardSubtext}>Awaiting pickup</p>
 				</div>
-				<div className={styles.card}>
-					<h4>Total Meals Saved</h4>
-					<h2>{ngo.stats.totalMealsSaved}</h2>
+				<div
+					className={styles.card}
+					tabIndex="0"
+					aria-label={`Total Meals Saved: ${ngo.stats.totalMealsSaved}`}
+				>
+					<h2>Total Meals Saved</h2>
+					<p className={styles.cardStat}>{ngo.stats.totalMealsSaved}</p>
 					<p className={styles.cardSubtext}>Your impact so far</p>
 				</div>
-			</div>
+			</section>
 			{/* RECOMMENDATIONS */}
-			<div className={styles.recommendHeader}>
-				<div className={styles.matchIcon}>✨</div>
-				<div>
-					<h3 className={styles.recommendTitle}>
-						Recommended For You{" "}
-						<span className={styles.count}>{ngo.recommendations.length}</span>
-					</h3>
-					<p className={styles.matchText}>
-						High match — these listings match your capacity and are close to
-						your location
-					</p>
-				</div>
-			</div>
-			<div className={styles.recommendations}>
-				{ngo.recommendations.length === 0 ? (
-					<div className={styles.empty}>No recommendations at this time.</div>
-				) : (
-					ngo.recommendations.map((item) => (
-						<div key={item.id} className={styles.recommendCard}>
-							<h4>{item.title}</h4>
-							<p>From: {item.restaurant}</p>
-							<p>
-								{item.distance} • Prepared {item.preparedTime}
-							</p>
-							<button
-								className={styles.reserveBtn}
-								disabled={reservingId === item.id}
-								onClick={() => handleReserve(item.id)}
+			<section
+				className={styles.recommendSection}
+				aria-label="Recommended Meals"
+			>
+				<div className={styles.recommendHeader}>
+					<div className={styles.matchIcon} aria-hidden="true">
+						✨
+					</div>
+					<div>
+						<h2 className={styles.recommendTitle}>
+							Recommended For You{" "}
+							<span
+								className={styles.count}
+								aria-label={`Count: ${ngo.recommendations.length}`}
 							>
-								{reservingId === item.id ? "Reserving..." : "Reserve Now"}
-							</button>
-						</div>
-					))
-				)}
-			</div>
-			{/* IMPACT DASHBOARD */}
-			<div className={styles.section}>
-				<h3>Your Impact</h3>
-				<div className={styles.impactStats}>
-					<div>
-						<strong>Meals Saved:</strong> {ngo.stats.totalMealsSaved}
-					</div>
-					<div>
-						<strong>Reserved Meals:</strong> {ngo.stats.reservedMeals}
-					</div>
-					<div>
-						<strong>Available Nearby:</strong> {ngo.stats.availableNearby}
+								{ngo.recommendations.length}
+							</span>
+						</h2>
+						<p className={styles.matchText}>
+							High match — these listings match your capacity and are close to
+							your location
+						</p>
 					</div>
 				</div>
-			</div>
+				<ul className={styles.recommendations} aria-live="polite">
+					{ngo.recommendations.length === 0 ? (
+						<li className={styles.empty}>No recommendations at this time.</li>
+					) : (
+						ngo.recommendations.map((item) => (
+							<li key={item.id} className={styles.recommendCard}>
+								<h3>{item.title}</h3>
+								<p>From: {item.restaurant}</p>
+								<p>
+									{item.distance} • Prepared {item.preparedTime}
+								</p>
+								<button
+									className={styles.reserveBtn}
+									aria-label={`Reserve meal: ${item.title}`}
+									disabled={reservingId === item.id}
+									aria-busy={reservingId === item.id}
+									onClick={() => handleReserve(item.id)}
+								>
+									{reservingId === item.id ? "Reserving..." : "Reserve Now"}
+								</button>
+							</li>
+						))
+					)}
+				</ul>
+			</section>
+			{/* IMPACT DASHBOARD */}
+			<section className={styles.section} aria-label="Your Impact">
+				<h2>Your Impact</h2>
+				<ul className={styles.impactStats}>
+					<li>
+						<strong>Meals Saved:</strong> {ngo.stats.totalMealsSaved}
+					</li>
+					<li>
+						<strong>Reserved Meals:</strong> {ngo.stats.reservedMeals}
+					</li>
+					<li>
+						<strong>Available Nearby:</strong> {ngo.stats.availableNearby}
+					</li>
+				</ul>
+			</section>
 		</div>
 	);
 }
