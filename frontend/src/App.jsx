@@ -11,7 +11,7 @@ import DashLayout from "./Components/DashLayout/DashLayout";
 import Sponsor from "./Pages/Sponsor/Sponsor";
 import ForgotPassword from "./Pages/ForgotPassword/ForgotPassword";
 import ResetPassword from "./Pages/ResetPassword/ResetPassword";
-import NgoLayout from "./Components/NgoDash/NgoLayout";
+import NgoLayout from "./Components/NgoLayout/NgoLayout";
 import Browse from "./Pages/Ngo/Browse";
 import Reserve from "./Pages/Ngo/Reserve";
 import Pickup from "./Pages/Ngo/Pickup";
