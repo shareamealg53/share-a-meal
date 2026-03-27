@@ -48,6 +48,14 @@ full_test_output.txt
 test-*.txt
 *.lcov
 
+# Markdown files (documentation) - keep only README
+*.md
+!README.md
+!backend/ml/README.md
+!backend/db/README.md
+!frontend/README.md
+!backend/tests/README.md
+
 # Temporary files and logs
 *.tmp
 *.log
