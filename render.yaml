@@ -4,10 +4,12 @@ services:
     runtime: node
     region: oregon
     rootDir: backend
-    buildCommand: npm ci --only=production
+    buildCommand: npm ci && npm run migrate-prod
     startCommand: npm start
     autoDeployTrigger: commit
-    healthCheckPath: /
+    healthCheckPath: /health
+    healthCheckInterval: 10
+    maxShutdownDelay: 30
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,6 +25,8 @@ services:
         sync: false
       - key: DB_NAME
         sync: false
+      - key: DB_SSL
+        value: "true"
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
@@ -36,14 +40,16 @@ services:
       - key: SMTP_FROM
         sync: false
       - key: API_URL
-        value: https://shareameal-api.onrender.com
+        sync: false
       - key: FRONTEND_URL
-        value: https://share-a-meal-1p8k.vercel.app
+        sync: false
       - key: JWT_SECRET
-        generateValue: true
-      - key: ADMIN_SECRET
         generateValue: true
       - key: SERVICE_TOKEN
         generateValue: true
+      - key: MODEL_URL
+        sync: false
+      - key: MODEL_LOCAL_PATH
+        value: /tmp/food_status_model.pkl
     plan: free
     numInstances: 1

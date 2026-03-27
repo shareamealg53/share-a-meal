@@ -114,9 +114,8 @@ input::placeholder {
 .inputGroup {
   position: relative;
   margin-bottom: 20px;
-}
-
-.inputGroup input,
+	display: flex;
+	flex-direction: column;
 .inputGroup select {
   width: 100%;
   border-radius: 6px;
@@ -125,14 +124,10 @@ input::placeholder {
 }
 
 .error {
-  position: absolute;
-  left: 12px;
-  top: 90%;
-  transform: translateY(-50%);
-  color: var(--Error);
-  font-size: 12px;
-  pointer-events: none;
-}
+	margin-top: 4px;
+	color: var(--Error);
+	font-size: 12px;
+	line-height: 1.3;
 
 @media (min-width: 768px) {
   .login {

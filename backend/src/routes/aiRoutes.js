@@ -6,6 +6,7 @@ const {
 	setMealExpiry,
 	updateMealExpiry,
 	updateMealFoodStatus,
+	predictMealFoodStatus,
 } = require("../controllers/aiController");
 
 const { authenticateService } = require("../middleware/serviceAuth");
@@ -41,6 +42,13 @@ router.patch(
 	validateIdParam("mealId"),
 	authenticateService,
 	updateMealFoodStatus,
+);
+
+router.post(
+	"/meal/:mealId/predict",
+	validateIdParam("mealId"),
+	authenticateService,
+	predictMealFoodStatus,
 );
 
 module.exports = router;

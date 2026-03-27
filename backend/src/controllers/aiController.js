@@ -1,6 +1,8 @@
 const pool = require("../config/db");
 const { AppError } = require("../middleware/errorHandler");
 
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:8000";
+
 const logMealStatusChange = async (mealId, fromStatus, toStatus, note) => {
 	try {
 		await pool.query(
@@ -247,10 +249,71 @@ const updateMealFoodStatus = async (req, res, next) => {
 	}
 };
 
+const predictMealFoodStatus = async (req, res, next) => {
+	try {
+		const { mealId } = req.params;
+		const { features } = req.body;
+
+		if (!features || !Array.isArray(features)) {
+			throw new AppError(
+				"features array is required",
+				400,
+				"VALIDATION_ERROR",
+				{ field: "features", expected: "number[]" },
+			);
+		}
+
+		const [meals] = await pool.query(
+			"SELECT id, title, status FROM meals WHERE id = ?",
+			[mealId],
+		);
+
+		if (meals.length === 0) {
+			throw new AppError("Meal not found", 404, "NOT_FOUND", {
+				resource: "meal",
+				id: mealId,
+			});
+		}
+
+		// Try to call ML service
+		try {
+			const mlResponse = await fetch(`${ML_SERVICE_URL}/predict`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ features }),
+			});
+
+			if (!mlResponse.ok) {
+				throw new Error(`ML service error: ${mlResponse.status}`);
+			}
+
+			const prediction = await mlResponse.json();
+
+			res.json({
+				message: "Food status prediction generated",
+				mealId,
+				prediction: prediction.predictions[0],
+				features,
+			});
+		} catch (mlError) {
+			console.error("ML Service error:", mlError);
+			throw new AppError(
+				"ML prediction service unavailable",
+				503,
+				"SERVICE_ERROR",
+				{ service: "ml-model-service" },
+			);
+		}
+	} catch (error) {
+		next(error);
+	}
+};
+
 module.exports = {
 	getMealForAI,
 	getMealsForAI,
 	setMealExpiry,
 	updateMealExpiry,
 	updateMealFoodStatus,
+	predictMealFoodStatus,
 };

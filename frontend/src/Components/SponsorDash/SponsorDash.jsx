@@ -130,7 +130,7 @@ export default function SponsorDash() {
 					</button>
 				</form>
 
-				{buyError && <div style={{ color: "red" }}>{buyError}</div>}
+				{buyError && <div className={styles.error}>{buyError}</div>}
 			</div>
 		</div>
 	);
